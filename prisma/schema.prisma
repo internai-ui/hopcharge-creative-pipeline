@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Idea {
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  title            String
+  hook             String
+  imageVisual      String
+  videoVisual      String
+  cta              String
+  angle            String
+  rank             Int       @default(0)
+  status           IdeaStatus @default(pending)
+  funnelStage      FunnelStage?
+  sourceType       IdeaSourceType @default(ai_generated)
+  nudge            String?
+  parentIdeaId     String?
+  parent           Idea?     @relation("IdeaChildren", fields: [parentIdeaId], references: [id])
+  children         Idea[]    @relation("IdeaChildren")
+  performanceScore Float?
+  trendTags        String[]  @default([])
+  trendScore       Float?
+  trendScoredAt    DateTime?
+  trendWarning     String?
+
+  creatives        Creative[]
+
+  @@index([status])
+  @@index([rank])
+}
+
+model Creative {
+  id               String          @id @default(uuid())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  ideaId           String
+  idea             Idea            @relation(fields: [ideaId], references: [id])
+  status           CreativeStatus  @default(generating)
+  mediaType        String          @default("video")
+  generatorName    String
+  generatorJobId   String?
+  originalFilePath String?
+  editedFilePath   String?
+  isHumanEdited    Boolean         @default(false)
+  thumbnailPath    String?
+  durationSeconds  Int?
+  metadata         Json?
+
+  posts            Post[]
+
+  @@index([status])
+  @@index([ideaId])
+}
+
+model Post {
+  id               String      @id @default(uuid())
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  creativeId       String
+  creative         Creative    @relation(fields: [creativeId], references: [id])
+  platform         Platform
+  status           PostStatus  @default(queued)
+  scheduledAt      DateTime?
+  postedAt         DateTime?
+  externalPostId   String?
+  platformMetadata Json?
+
+  snapshots        PerformanceSnapshot[]
+
+  @@index([status])
+  @@index([platform])
+  @@index([creativeId])
+}
+
+model PerformanceSnapshot {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  postId       String
+  post         Post     @relation(fields: [postId], references: [id])
+  snapshotDate DateTime @db.Date
+  impressions  Int      @default(0)
+  reach        Int      @default(0)
+  clicks       Int      @default(0)
+  spend        Decimal  @db.Decimal(10, 2)
+  roas         Decimal? @db.Decimal(10, 4)
+  cpm          Decimal  @db.Decimal(10, 4)
+  ctr          Decimal  @db.Decimal(10, 6)
+  frequency    Decimal  @db.Decimal(10, 4)
+  rawData      Json?
+
+  @@index([postId])
+  @@index([snapshotDate])
+}
+
+model TrendContext {
+  id                    String   @id @default(uuid())
+  createdAt             DateTime @default(now())
+  summary               String
+  risingTopics          Json
+  decliningTopics       Json
+  platformFormatTrends  Json
+  competitorAdInsights  String
+  rawSources            Json?
+  topicScores           Json
+
+  @@index([createdAt])
+}
+
+model PipelineIssue {
+  id              String         @id @default(uuid())
+  createdAt       DateTime       @default(now())
+  resolvedAt      DateTime?
+  severity        IssueSeverity
+  stage           PipelineStage
+  description     String
+  relatedEntityId String?
+  isResolved      Boolean        @default(false)
+
+  @@index([isResolved])
+  @@index([severity])
+}
+
+model AgentAction {
+  id                  String   @id @default(uuid())
+  createdAt           DateTime @default(now())
+  actionType          String
+  decisionRationale   String
+  humanOverridden     Boolean  @default(false)
+  humanOverrideReason String?
+  outcome             String?
+  relatedEntityId     String?
+
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+enum IdeaStatus {
+  pending
+  selected
+  in_production
+  published
+  archived
+}
+
+enum IdeaSourceType {
+  ai_generated
+  human_added
+}
+
+// Marketing funnel stage an idea targets:
+//   TOF — top of funnel (awareness / broad reach)
+//   MOF — middle of funnel (consideration / nurture)
+//   BOF — bottom of funnel (conversion / direct response)
+enum FunnelStage {
+  TOF
+  MOF
+  BOF
+}
+
+enum CreativeStatus {
+  generating
+  ready_for_review
+  approved
+  rejected
+  published
+}
+
+enum Platform {
+  meta
+  youtube
+}
+
+enum PostStatus {
+  queued
+  posted
+  failed
+}
+
+enum IssueSeverity {
+  info
+  warning
+  critical
+}
+
+enum PipelineStage {
+  idea_generation
+  trend_analysis
+  production
+  review
+  publishing
+  analytics
+  feedback_loop
+}
+
+model HistoricalAd {
+  id           String   @id @default(uuid())
+  importedAt   DateTime @default(now())
+  metaAdId     String   @unique
+  adName       String
+  campaignName String?
+  adSetName    String?
+  bodyText     String
+  headlineText String?
+  cpl          Float
+  leads        Int      @default(0)
+  spend        Float
+  isSuccessful Boolean
+  concepts     Json?
+  dateFrom     DateTime
+  dateTo       DateTime
+  source       String   @default("import")
+
+  @@index([isSuccessful])
+  @@index([cpl])
+}

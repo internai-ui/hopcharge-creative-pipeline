@@ -1,0 +1,18 @@
+[flux] Captured image URL: https://elevenlabs.io/app_assets/_next/static/media/ElevenCreative.01dum33k543mc.png
+[flux] Captured image URL: https://eleven-public-cdn.elevenlabs.io/marketing_website/assets/cookie-banner/orb.png
+[flux] Captured image URL: https://c8f1bf630547.w.hcaptcha.com/logo.png
+[flux] Job flux-eb2d2ad2-51d6-4232-93bb-c6ba5396d1f6 failed: locator.waitFor: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': 'p.first:before:content-[attr(data-placeholder)]' is not a valid selector.
+    at query (<anonymous>:5334:41)
+    at <anonymous>:5344:7
+    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)
+    at SelectorEvaluatorImpl._queryCSS (<anonymous>:5331:17)
+    at SelectorEvaluatorImpl._querySimple (<anonymous>:5211:19)
+    at <anonymous>:5159:29
+    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)
+    at SelectorEvaluatorImpl.query (<anonymous>:5152:19)
+    at Object.query (<anonymous>:5366:44)
+    at <anonymous>:5324:21
+Call log:
+[2m  - waiting for locator('p.first:before:content-[attr(data-placeholder)]').first() to be visible[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-flux.ts:111:20)

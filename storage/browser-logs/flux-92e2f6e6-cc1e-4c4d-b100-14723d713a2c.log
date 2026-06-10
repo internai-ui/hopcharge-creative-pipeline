@@ -1,0 +1,7 @@
+[flux] Job flux-92e2f6e6-cc1e-4c4d-b100-14723d713a2c failed: page.goto: net::ERR_NETWORK_CHANGED at https://elevenlabs.io/app/image-video?modality=image
+Call log:
+[2m  - navigating to "https://elevenlabs.io/app/image-video?modality=image", waiting until "domcontentloaded"[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-flux.ts:101:16) {
+  name: 'Error'
+}

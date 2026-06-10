@@ -1,0 +1,19 @@
+[runway-browser] url=https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools&tool=video prompt="[aria-label="Prompt"]" btn="#react-aria2721288406-:rll:"
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Job runway-362a4b08-bd54-4c95-8efd-973090005475 failed: locator.waitFor: Unexpected token "" while parsing css selector "#react-aria2721288406-:rll:". Did you mean to CSS.escape it?
+Call log:
+[2m  - waiting for #react-aria2721288406-:rll: >> nth=0 to be visible[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-runway.ts:106:23) {
+  name: 'Error'
+}

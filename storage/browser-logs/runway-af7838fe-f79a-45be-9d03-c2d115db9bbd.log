@@ -1,0 +1,16 @@
+[runway-browser] url=https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools prompt="[aria-label="Prompt"]" btn="#react-aria4022669850-:rd5:"
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Job runway-af7838fe-f79a-45be-9d03-c2d115db9bbd failed: locator.waitFor: Timeout 20000ms exceeded.
+Call log:
+[2m  - waiting for locator('[aria-label="Prompt"]').first() to be visible[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-runway.ts:98:20) {
+  name: 'TimeoutError'
+}

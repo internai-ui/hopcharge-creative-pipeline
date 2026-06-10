@@ -1,0 +1,7 @@
+{
+  "id": "runway-99901dca-f56b-48d7-9fb4-56a91dfb39e4",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "Error: Could not find the prompt input. Check storage/browser-debug/ screenshots and re-run npm run browser:setup:runway.",
+  "startedAt": 1780738347002
+}

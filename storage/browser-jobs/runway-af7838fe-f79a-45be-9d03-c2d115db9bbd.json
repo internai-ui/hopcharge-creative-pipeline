@@ -1,0 +1,7 @@
+{
+  "id": "runway-af7838fe-f79a-45be-9d03-c2d115db9bbd",
+  "prompt": "Close-up of Hopcharge operator — certification badge, careful connector handling, safety checks. Professional and reassuring. Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "TimeoutError: locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[aria-label=\"Prompt\"]').first() to be visible\u001b[22m\n",
+  "startedAt": 1780470939167
+}

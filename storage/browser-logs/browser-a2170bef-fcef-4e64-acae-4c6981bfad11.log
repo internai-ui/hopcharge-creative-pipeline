@@ -1,0 +1,21 @@
+[kling] Job browser-a2170bef-fcef-4e64-acae-4c6981bfad11 failed: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('a, button, [role="menuitem"]').filter({ hasText: /create/i }).first()[22m
+[2m    - locator resolved to <button type="button" data-v-3865d471="" class="my-spaces-block__new-btn">…</button>[22m
+[2m  - attempting click action[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is not visible[22m
+[2m    - retrying click action[22m
+[2m    - waiting 20ms[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is not visible[22m
+[2m    - retrying click action[22m
+[2m      - waiting 100ms[22m
+[2m    59 × waiting for element to be visible, enabled and stable[22m
+[2m       - element is not visible[22m
+[2m     - retrying click action[22m
+[2m       - waiting 500ms[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:108:20) {
+  name: 'TimeoutError'
+}

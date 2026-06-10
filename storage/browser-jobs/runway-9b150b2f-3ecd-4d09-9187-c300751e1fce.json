@@ -1,0 +1,7 @@
+{
+  "id": "runway-9b150b2f-3ecd-4d09-9187-c300751e1fce",
+  "prompt": "Wide aerial shots of Indian cities — smoggy vs. clear skies — EV adoption graphic rising, Hopcharge network dots spreading across the map.\n Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "Error: locator.waitFor: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': '[placeholder=Enter the script]' is not a valid selector.\n    at query (<anonymous>:5334:41)\n    at <anonymous>:5344:7\n    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)\n    at SelectorEvaluatorImpl._queryCSS (<anonymous>:5331:17)\n    at SelectorEvaluatorImpl._querySimple (<anonymous>:5211:19)\n    at <anonymous>:5159:29\n    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)\n    at SelectorEvaluatorImpl.query (<anonymous>:5152:19)\n    at Object.query (<anonymous>:5366:44)\n    at <anonymous>:5324:21\nCall log:\n\u001b[2m  - waiting for locator('[placeholder=Enter the script]').first() to be visible\u001b[22m\n",
+  "startedAt": 1780720265326
+}

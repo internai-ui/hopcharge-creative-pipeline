@@ -1,0 +1,50 @@
+[flyne] url=https://flyne.ai/ prompt="[placeholder="Please enter a prompt"]" btn="button.flex"
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/ai_video_generator.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/ai_text_to_video_generator.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/video_to_video.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/photo_to_video.webp
+[flyne] Intercepted [image/png]: https://flyne.ai/images/logo.png
+[flyne] Intercepted [image/gif]: https://www.google.co.in/pagead/1p-user-list/16672124251/?random=1780719848344&cv=11&fst=17807184000
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-user-list/16672124251/?random=1780719848344&cv=11&fst=1780718400000
+[flyne] Intercepted [image/gif]: https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16672124251/?random=1459923728&cv=1
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2042202222512201728/img/7GlzUTvoFApG3pjX?format=jpg&name=s
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/1935941494067859456/X2_yLFE9_normal.jpg
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2049079032894062593/img/-TJh1tnBTeUtsOsf?format=jpg&name=s
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2038624616311361536/img/ZmN0E688WI325V1L?format=jpg&name=s
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/2037059413786451968/ebyJqzCS_normal.jpg
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2049450114172035072/img/dPemWqtYbnkve_c0?format=jpg&name=s
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-conversion/16672124251/?random=1459923728&cv=11&fst=1780719848475&f
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/2031327311983947784/QbA0KR1-_normal.jpg
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Dismissed consent: "Accept"
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-user-list/16672124251/?random=1780719860102&cv=11&fst=1780718400000
+[flyne] Intercepted [image/gif]: https://www.google.co.in/pagead/1p-user-list/16672124251/?random=1780719860102&cv=11&fst=17807184000
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-user-list/16672124251/?random=1780719865018&cv=11&fst=1780718400000
+[flyne] Intercepted [image/gif]: https://www.google.co.in/pagead/1p-user-list/16672124251/?random=1780719865018&cv=11&fst=17807184000
+[flyne] Waiting for generation to complete...
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Still generating at 5s...
+[flyne] Still generating at 10s...
+[flyne] Still generating at 15s...
+[flyne] Still generating at 20s...
+[flyne] Still generating at 25s...
+[flyne] Still generating at 30s...
+[flyne] Still generating at 35s...
+[flyne] Still generating at 40s...
+[flyne] Still generating at 45s...
+[flyne] Still generating at 51s...
+[flyne] Still generating at 56s...
+[flyne] Still generating at 61s...
+[flyne] Still generating at 66s...
+[flyne] Generation appears complete — waiting for images to load...
+[flyne] Job flyne-19bd9088-8d2a-4a7d-84b3-b15e5fa5e643 failed: Error: Timed out after 300s. Check screenshots in storage/browser-debug/
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-flyne.ts:348:11)

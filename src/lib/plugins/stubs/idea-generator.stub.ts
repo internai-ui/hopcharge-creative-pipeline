@@ -1,0 +1,112 @@
+import type { IdeaGeneratorPlugin, IdeaSuggestion } from '../interfaces'
+
+export class IdeaGeneratorStub implements IdeaGeneratorPlugin {
+  name = 'stub'
+
+  async generateIdeas({ count }: { count: number; nudge?: string }): Promise<IdeaSuggestion[]> {
+    const templates: IdeaSuggestion[] = [
+      {
+        title: 'Range Anxiety Buster',
+        hook: 'Living in a Gurugram apartment and worried about running out of charge? We come to you.',
+        imageVisual: 'Close-up of a worried Indian man in his car, battery gauge nearly empty, warm evening light through the windshield — Hopcharge app notification glowing on his phone in the foreground',
+        videoVisual: 'Open on tight shot of a low-battery gauge beeping; cut to man opening Hopcharge app on phone; cut wide to a white Hopcharge van pulling into a gated apartment colony at dusk; close on the charging connector clicking in — relief on his face',
+        cta: 'Book a charge in 30 seconds',
+        angle: 'pain_point',
+        trendTags: ['ev_range_anxiety', 'apartment_ev_charging', 'doorstep_charging'],
+        rationale: 'Addresses the #1 barrier for Delhi-NCR apartment EV owners',
+      },
+      {
+        title: 'Van at Your Door',
+        hook: 'I never installed a home charger. The charger comes to me.',
+        imageVisual: 'Aerial overhead shot: a white Hopcharge van parked in a clean apartment colony lot, charging cable running to a silver Tata Nexon EV — soft morning light, no people, serene',
+        videoVisual: 'Slow push-in from above: Hopcharge van rolls into a premium apartment colony; owner walks down from lobby, phone in hand; cable connects with a satisfying click; time-lapse of charge bar filling to 100%',
+        cta: 'Schedule your first charge',
+        angle: 'convenience',
+        trendTags: ['doorstep_charging', 'no_home_charger', 'tata_ev'],
+        rationale: 'The doorstep model is Hopcharge\'s core USP — this makes it visceral',
+      },
+      {
+        title: 'Midnight RescueCharge',
+        hook: 'Dead battery at 11 PM. Hopcharge was there in 40 minutes.',
+        imageVisual: 'Night-time: a stranded Tata Tiago EV on a quiet Gurugram road, hazard lights blinking, Hopcharge van headlights approaching in the background — cinematic blue-orange contrast',
+        videoVisual: 'Handheld UGC-style: owner films her dead EV on a dark street; she opens Hopcharge app, taps RescueCharge; cut to van arriving — wide to close on cable connection; final shot: her driving away, city lights in rearview',
+        cta: 'Add RescueCharge to your plan',
+        angle: 'problem_solution',
+        trendTags: ['ev_emergency_charging', 'rescuecharge', 'ev_range_anxiety'],
+        rationale: 'Emergency use case creates urgency and demonstrates unique reliability',
+      },
+      {
+        title: 'Apartment Owner Wins',
+        hook: 'My building said no to a charger. Hopcharge said yes.',
+        imageVisual: 'Split composition: left half shows a "No Charger Installation" notice on a notice board; right half shows a Hopcharge van charging a Tata Punch EV in the same building\'s parking — same warm afternoon light',
+        videoVisual: 'Talking-head, UGC style: young woman in modern apartment lobby explains why she couldn\'t install a charger; cut to her booking on the app; cut to van arriving at her building gate; end card: "We come to you"',
+        cta: 'Works for any apartment',
+        angle: 'social_proof',
+        trendTags: ['apartment_ev_charging', 'renting_ev', 'no_home_charger'],
+        rationale: 'Directly targets the rented/restricted-apartment segment — largest addressable pain point',
+      },
+      {
+        title: 'The 48-Hour Schedule',
+        hook: 'Plan tomorrow\'s charge tonight. Wake up to 100%.',
+        imageVisual: 'Phone screen close-up in dim bedroom light: Hopcharge app calendar booking interface, confirming "Tomorrow 7 AM — 80% → 100%" — Tata Nexon EV visible through a window in background',
+        videoVisual: 'Evening routine montage: person on sofa books Hopcharge slot on phone; morning — van already in parking, cable connected; owner walks out coffee in hand, disconnects, drives off to work — all in one smooth 20-second arc',
+        cta: 'Book up to 48 hours ahead',
+        angle: 'lifestyle',
+        trendTags: ['ev_lifestyle', 'smart_charging', 'morning_routine'],
+        rationale: 'Advance booking turns Hopcharge into a frictionless daily habit',
+      },
+      {
+        title: 'Tata EV + Hopcharge',
+        hook: 'Got a Tata EV? Hopcharge is your official charging partner.',
+        imageVisual: 'Brand partnership shot: Tata Curvv EV and white Hopcharge van side by side in a clean dealership forecourt, golden hour light, no clutter — premium feel',
+        videoVisual: 'Cinematic brand film style: Tata EV drives into frame and parks; Hopcharge van pulls alongside; time-lapse of charge; both vehicles drive away together; end title "Tata.ev × Hopcharge — Official Charging Partner"',
+        cta: 'Included with select Tata EV plans',
+        angle: 'social_proof',
+        trendTags: ['tata_ev', 'tata_nexon_ev', 'official_partnership'],
+        rationale: 'Tata.ev partnership is a strong credibility signal for Tata EV owners',
+      },
+      {
+        title: 'Rs 3.5 Per Km Math',
+        hook: 'Petrol costs Rs 8/km. Hopcharge costs Rs 3.5/km. Do the math.',
+        imageVisual: 'Bold typographic split: left side shows petrol pump receipt (Rs 8/km, red tones); right side shows Hopcharge app charge summary (Rs 3.5/km, clean electric blue) — stark, high contrast',
+        videoVisual: 'Fast-cut calculator-style animation: petrol pump → rupees flying out; EV charging → smaller rupee figure; cut to real person driving Tata EV, smiling; end on savings figure with Hopcharge branding',
+        cta: 'Calculate your monthly savings',
+        angle: 'curiosity_gap',
+        trendTags: ['ev_cost_savings', 'petrol_vs_ev', 'ev_economics'],
+        rationale: 'Cost comparison is a top purchase driver for Indian EV considerers',
+      },
+      {
+        title: 'NCR EV Owner Day',
+        hook: 'A day in the life of an EV owner in Gurugram — zero charging stress.',
+        imageVisual: 'Lifestyle flat-lay: Gurugram skyline in background, Tata EV keys, phone with Hopcharge app open, coffee cup — soft morning light, aspirational urban professional aesthetic',
+        videoVisual: 'Day-in-the-life vlog format: morning — van charging in parking while owner has breakfast; commute — smooth drive through Cyber Hub; evening — app shows next booking confirmed; end card "No charger needed at home"',
+        cta: 'Start your Hopcharge subscription',
+        angle: 'lifestyle',
+        trendTags: ['gurugram_ev', 'delhi_ncr_ev', 'ev_lifestyle'],
+        rationale: 'Normalises EV ownership in NCR context; aspirational but relatable',
+      },
+      {
+        title: 'Subscription Explained',
+        hook: 'One subscription. 48 fast-charges a year. RescueCharge included.',
+        imageVisual: 'Clean infographic-style image: three plan cards (Experience / Success 3.3 / Success 7.2) on a minimal white background with electric-blue highlights — scannable, professional',
+        videoVisual: 'Explainer motion-graphic: subscription tier cards animate in one by one with feature highlights; cut to real footage of van arriving and charging; end with app download CTA overlay',
+        cta: 'See all plans',
+        angle: 'education',
+        trendTags: ['ev_subscription', 'charging_plan', 'hopcharge_plans'],
+        rationale: 'Subscription model needs demystifying — this drives consideration-to-conversion',
+      },
+      {
+        title: 'Discover Hopcharge',
+        hook: 'You just bought an EV. You live in an apartment. Now what?',
+        imageVisual: 'Discovery moment: new Tata EV owner standing in apartment parking, slightly uncertain, phone in hand — Hopcharge app notification pops up on screen — warm, relatable expression',
+        videoVisual: 'New-owner journey: unboxing-style energy as couple picks up Tata EV from dealership; cut to realisation at home — no charger; phone search; Hopcharge app found; first van booking confirmed; celebratory close',
+        cta: 'The answer for apartment EV owners',
+        angle: 'discovery',
+        trendTags: ['new_ev_owner', 'first_time_ev', 'apartment_ev_charging'],
+        rationale: 'Targets new EV buyers at the moment of highest anxiety and openness',
+      },
+    ]
+
+    return templates.slice(0, Math.min(count, templates.length))
+  }
+}

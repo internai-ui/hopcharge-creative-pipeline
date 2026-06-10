@@ -1,0 +1,2 @@
+[kling] Job browser-6398c757-620f-4701-9353-3409174efc71 failed: Error: Not logged into kling.ai. Your saved session is from klingai.com (old domain). Run: npm run browser:setup — log into kling.ai, navigate to Creative Studio, then press Enter.
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:72:13)

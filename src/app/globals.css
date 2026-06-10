@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Chart theming */
+:root {
+  --chart-grid: #e5e7eb;
+  --chart-tick: #9ca3af;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e5e7eb;
+  --chart-tooltip-label: #111827;
+}
+
+.dark {
+  --chart-grid: #27272a;
+  --chart-tick: #71717a;
+  --chart-tooltip-bg: #18181b;
+  --chart-tooltip-border: #3f3f46;
+  --chart-tooltip-label: #ffffff;
+}
+
+/* Page content fade-in */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page {
+  animation: page-in 0.22s ease forwards;
+}
+
+/* Trend dot pulse */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.animate-pulse-soft {
+  animation: soft-pulse 2s ease-in-out infinite;
+}
+
+/* Right-side drawer slide-in */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Overlay fade-in */
+@keyframes fade-overlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-overlay {
+  animation: fade-overlay 0.18s ease forwards;
+}

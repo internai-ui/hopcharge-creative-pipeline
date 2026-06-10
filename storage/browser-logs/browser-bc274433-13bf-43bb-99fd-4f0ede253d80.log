@@ -1,0 +1,8 @@
+[kling] Using config: url=https://kling.ai/app/video/new?ac=1 prompt="div.tiptap" btn="button.generic-button"
+[kling] Captured CDN video URL: https://kling.ai/app/video/new?ac=1
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Waiting up to 300s for video generation...
+[kling] Job browser-bc274433-13bf-43bb-99fd-4f0ede253d80 failed: page.waitForTimeout: Target page, context or browser has been closed
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:151:22)

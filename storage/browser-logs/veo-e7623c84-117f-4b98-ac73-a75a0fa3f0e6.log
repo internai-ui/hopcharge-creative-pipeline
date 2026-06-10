@@ -1,0 +1,4 @@
+[veo] Config: url=https://aistudio.google.com/prompts/new_chat prompt="[aria-label="Enter a prompt"]" btn="span.secondary-key"
+[veo] Polling for up to 300s...
+[veo] Job veo-e7623c84-117f-4b98-ac73-a75a0fa3f0e6 failed: page.evaluate: Target page, context or browser has been closed
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-veo.ts:135:35)

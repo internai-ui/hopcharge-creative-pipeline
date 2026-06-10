@@ -1,0 +1,7 @@
+{
+  "id": "runway-dd985462-79c3-4eca-b0f3-673d3f8302c6",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "Error: locator.waitFor: Unexpected token \"\" while parsing css selector \"#react-aria4022669850-:rd5:\". Did you mean to CSS.escape it?\nCall log:\n\u001b[2m  - waiting for #react-aria4022669850-:rd5: >> nth=0 to be visible\u001b[22m\n",
+  "startedAt": 1780463138870
+}

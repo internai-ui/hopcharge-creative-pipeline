@@ -1,0 +1,12 @@
+[runway-browser] url=https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools prompt="[aria-label="Prompt"]" btn="#react-aria4022669850-:rd5:"
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Job runway-a1d2dd09-81ce-4ec0-8417-45c1a2c3573c failed: locator.waitFor: Target page, context or browser has been closed
+Call log:
+[2m  - waiting for locator('[aria-label="Prompt"]').first() to be visible[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-runway.ts:98:20)

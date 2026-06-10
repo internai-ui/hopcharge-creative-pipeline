@@ -1,0 +1,7 @@
+{
+  "id": "flyne-e3ead2f2-be81-46e8-aacf-f9b4a92a4257",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.",
+  "status": "failed",
+  "error": "Error: locator.type: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('[placeholder=\"Please enter a prompt\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <textarea name=\"prompt\" placeholder=\"Please enter a prompt\" class=\"flex border border-input text-sm ring-offset-background focus:placeholder:text-transparent focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 min-h-fit w-full flex-1 resize-none rounded-xl border-none bg-transparent p-2 placeholder:text-[#E2E2E266]\"></textarea>\u001b[22m\n\u001b[2m  - elementHandle.type(\"Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.\")\u001b[22m\n",
+  "startedAt": 1780484166078
+}

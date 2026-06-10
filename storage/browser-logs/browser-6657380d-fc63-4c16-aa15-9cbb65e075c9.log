@@ -1,0 +1,8 @@
+[kling] Using config: url=https://kling.ai/app/video/new?ac=1 prompt="div.tiptap" btn="button.generic-button"
+[kling] Captured CDN video URL: https://kling.ai/app/video/new?ac=1
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Captured CDN video URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Waiting up to 300s for video generation...
+[kling] Using intercepted CDN URL: https://v15-kling.klingai.com/bs2/upload-ylab-stunt-sgp/23c2555e-ad61-43b9-9464-c8b65e9ee99e-8m2IQsWJoRbN5G4EnO0GoA-output.mp4_multi_bitrate_wm_config_x264_kling_1080p_hd_v2_adc28028f36d448dbf11399cc5408b00?x-kcdn-pid=112372
+[kling] Job browser-6657380d-fc63-4c16-aa15-9cbb65e075c9 complete

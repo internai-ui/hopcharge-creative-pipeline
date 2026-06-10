@@ -1,0 +1,7 @@
+{
+  "id": "flyne-0d505b8f-576c-4a85-92a5-ef6debcaa261",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.",
+  "status": "failed",
+  "error": "Error: locator.fill: Error: Element is not an <input>, <textarea>, <select> or [contenteditable] and does not have a role allowing [aria-readonly]\nCall log:\n\u001b[2m  - waiting for locator('button.flex').first()\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" data-state=\"open\" aria-expanded=\"true\" aria-haspopup=\"dialog\" aria-controls=\"radix-_R_1ipivb_\" class=\"flex h-10 min-h-10 items-center gap-1 rounded-lg border-none px-1 hover:text-main-color\">…</button>\u001b[22m\n\u001b[2m    - fill(\"\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
+  "startedAt": 1780477929709
+}

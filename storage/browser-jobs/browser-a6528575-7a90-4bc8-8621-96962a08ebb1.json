@@ -1,0 +1,7 @@
+{
+  "id": "browser-a6528575-7a90-4bc8-8621-96962a08ebb1",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "Error: Not logged into kling.ai — session missing or expired. Run: npm run browser:setup to log in again.",
+  "startedAt": 1780398342666
+}

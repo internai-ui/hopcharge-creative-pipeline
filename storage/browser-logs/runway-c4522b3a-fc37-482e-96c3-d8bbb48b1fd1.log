@@ -1,0 +1,28 @@
+[runway-browser] url=https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools prompt="[placeholder=Enter the script]" btn="#react-aria1020157214-:rcp:"
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/mira/empty-states/edit-studio-empty-state.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/seedance-emptystate.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/MultiShot_touchpoint_optimized.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/kling-product.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/calliope-demo/ga/RW_Characters_Hero_Comp.webm
+[runway-browser] Captured video URL: https://d3phaj0sisr2ct.cloudfront.net/app/empty-state/gen45-emptystate-new.webm
+[runway-browser] Job runway-c4522b3a-fc37-482e-96c3-d8bbb48b1fd1 failed: locator.waitFor: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': '[placeholder=Enter the script]' is not a valid selector.
+    at query (<anonymous>:5334:41)
+    at <anonymous>:5344:7
+    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)
+    at SelectorEvaluatorImpl._queryCSS (<anonymous>:5331:17)
+    at SelectorEvaluatorImpl._querySimple (<anonymous>:5211:19)
+    at <anonymous>:5159:29
+    at SelectorEvaluatorImpl._cached (<anonymous>:5121:20)
+    at SelectorEvaluatorImpl.query (<anonymous>:5152:19)
+    at Object.query (<anonymous>:5366:44)
+    at <anonymous>:5324:21
+Call log:
+[2m  - waiting for locator('[placeholder=Enter the script]').first() to be visible[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-runway.ts:98:20)

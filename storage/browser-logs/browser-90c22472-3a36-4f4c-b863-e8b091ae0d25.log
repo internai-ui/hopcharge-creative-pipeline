@@ -1,0 +1,2 @@
+[kling] Job browser-90c22472-3a36-4f4c-b863-e8b091ae0d25 failed: Error: Not logged into kling.ai — session missing or expired. Run: npm run browser:setup to log in again.
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:76:13)

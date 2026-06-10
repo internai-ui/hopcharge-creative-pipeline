@@ -1,0 +1,8 @@
+[runway-browser] url=https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools prompt="[aria-label="Prompt"]" btn="#react-aria4022669850-:rd5:"
+[runway-browser] Job runway-187b7a82-c35d-4091-9ded-dffd922cc7a3 failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+[2m  - navigating to "https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools", waiting until "domcontentloaded"[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-runway.ts:87:16) {
+  name: 'TimeoutError'
+}

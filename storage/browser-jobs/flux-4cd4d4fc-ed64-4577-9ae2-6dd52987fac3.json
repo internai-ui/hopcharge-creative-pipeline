@@ -1,0 +1,7 @@
+{
+  "id": "flux-4cd4d4fc-ed64-4577-9ae2-6dd52987fac3",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.",
+  "status": "failed",
+  "error": "Error: locator.type: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#image-video-prompt-box').first()\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"0\" translate=\"no\" contenteditable=\"true\" id=\"image-video-prompt-box\" data-agent-role=\"tiptap-input\" data-agent-id=\"image-video-prompt-_r_8h_\" class=\"tiptap ProseMirror px-4 py-[7px] h-full w-full text-md focus:outline-none focus:ring-none ring-transparent border-none ProseMirror-focused\">…</div>\u001b[22m\n\u001b[2m  - elementHandle.type(\"Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.\")\u001b[22m\n",
+  "startedAt": 1780720090717
+}

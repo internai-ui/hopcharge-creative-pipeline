@@ -1,0 +1,12 @@
+[kling] Using config: url=https://kling.ai/app/video/new?ac=1 prompt="div.tiptap" btn="button.generic-button"
+[kling] Waiting up to 300s for video generation...
+[kling] Job browser-eb5b2b03-071b-4ab0-a554-64e7395e8c8f failed: TypeError [ERR_INVALID_PROTOCOL]: Protocol "blob:" not supported. Expected "http:"
+    at new ClientRequest (node:_http_client:244:11)
+    at request (node:http:102:10)
+    at Object.get (node:http:113:15)
+    at <anonymous> (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:44:12)
+    at new Promise (<anonymous>)
+    at download (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:41:10)
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-kling.ts:163:11) {
+  code: 'ERR_INVALID_PROTOCOL'
+}

@@ -1,0 +1,7 @@
+{
+  "id": "runway-187b7a82-c35d-4091-9ded-dffd922cc7a3",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising video for an EV home charging service in India. Cinematic lighting, smooth camera movement, modern urban aesthetic.",
+  "status": "failed",
+  "error": "TimeoutError: page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://app.runwayml.com/video-tools/teams/internai0/ai-tools/generate?mode=tools\", waiting until \"domcontentloaded\"\u001b[22m\n",
+  "startedAt": 1780719811492
+}

@@ -1,0 +1,31 @@
+[flyne] url=https://flyne.ai/ prompt="button.flex" btn="button.flex"
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/ai_video_generator.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/photo_to_video.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/video_to_video.webp
+[flyne] Intercepted [image/webp]: https://cdn.flyne.ai/flyne/home/video_ai/ai_text_to_video_generator.webp
+[flyne] Intercepted [image/png]: https://flyne.ai/images/logo.png
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/gif]: https://flyne.ai/n1a6/as/d/ccm/conversion/16672124251/?random=1780477926025&cv=11&fst=1780477926025&
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/2037059413786451968/ebyJqzCS_normal.jpg
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/1935941494067859456/X2_yLFE9_normal.jpg
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2049450114172035072/img/dPemWqtYbnkve_c0?format=jpg&name=s
+[flyne] Intercepted [image/gif]: https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16672124251/?random=1903614814&cv=1
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2049079032894062593/img/-TJh1tnBTeUtsOsf?format=jpg&name=s
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/profile_images/2031327311983947784/QbA0KR1-_normal.jpg
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2038624616311361536/img/ZmN0E688WI325V1L?format=jpg&name=s
+[flyne] Intercepted [image/jpeg]: https://pbs.twimg.com/amplify_video_thumb/2042202222512201728/img/7GlzUTvoFApG3pjX?format=jpg&name=s
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-user-list/16672124251/?random=1780477925565&cv=11&fst=1780477200000
+[flyne] Intercepted [image/gif]: https://www.google.co.in/pagead/1p-user-list/16672124251/?random=1780477925565&cv=11&fst=17804772000
+[flyne] Intercepted [image/gif]: https://www.google.com/pagead/1p-conversion/16672124251/?random=1903614814&cv=11&fst=1780477926025&f
+[flyne] Dismissed consent: "Accept"
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Intercepted [image/svg+xml]: https://flyne.ai/icon.svg?2f559c0412bd6bed
+[flyne] Job flyne-0d505b8f-576c-4a85-92a5-ef6debcaa261 failed: locator.fill: Error: Element is not an <input>, <textarea>, <select> or [contenteditable] and does not have a role allowing [aria-readonly]
+Call log:
+[2m  - waiting for locator('button.flex').first()[22m
+[2m    - locator resolved to <button type="button" data-state="open" aria-expanded="true" aria-haspopup="dialog" aria-controls="radix-_R_1ipivb_" class="flex h-10 min-h-10 items-center gap-1 rounded-lg border-none px-1 hover:text-main-color">…</button>[22m
+[2m    - fill("")[22m
+[2m  - attempting fill action[22m
+[2m    - waiting for element to be visible, enabled and editable[22m
+
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-flyne.ts:138:20)

@@ -1,0 +1,7 @@
+{
+  "id": "flux-92e2f6e6-cc1e-4c4d-b100-14723d713a2c",
+  "prompt": "Dark bedroom, phone showing low battery alert at 4am — cut to Hopcharge van arriving at dawn, car fully charged by morning. Professional advertising photograph for an EV home charging service in India. Clean, modern, cinematic lighting, high production quality. Mood: pain point angle. Vertical portrait format, 9:16 aspect ratio.",
+  "status": "failed",
+  "error": "Error: page.goto: net::ERR_NETWORK_CHANGED at https://elevenlabs.io/app/image-video?modality=image\nCall log:\n\u001b[2m  - navigating to \"https://elevenlabs.io/app/image-video?modality=image\", waiting until \"domcontentloaded\"\u001b[22m\n",
+  "startedAt": 1780472455158
+}

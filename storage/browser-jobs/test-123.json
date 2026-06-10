@@ -1,0 +1,7 @@
+{
+  "id": "test-123",
+  "prompt": "test prompt",
+  "status": "failed",
+  "error": "TimeoutError: locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('textarea').first() to be visible\u001b[22m\n",
+  "startedAt": 1780397447832
+}
