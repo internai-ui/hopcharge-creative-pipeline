@@ -21,7 +21,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       const generator = getVideoGenerator()
       if (generator.cancelJob) {
         await generator.cancelJob(creative.generatorJobId).catch(() => {
-          // Non-fatal — generator may not support cancel or job already ended
+          // Non-fatal - generator may not support cancel or job already ended
         })
       }
     }

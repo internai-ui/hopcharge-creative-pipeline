@@ -1,5 +1,5 @@
 /**
- * Google Veo 3 web automation — runs as a child process.
+ * Google Veo 3 web automation - runs as a child process.
  * Drives Google AI Studio (aistudio.google.com) to generate videos with Veo 3.
  *
  * Reads JOB_ID, PROMPT, BROWSER_SESSION_FILE, BROWSER_CONFIG_FILE from env.

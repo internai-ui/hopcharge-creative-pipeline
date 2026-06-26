@@ -23,10 +23,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { creativeId, platforms, scheduledAt } = await req.json() as {
+    const { creativeId, platforms, scheduledAt, adSchedule } = await req.json() as {
       creativeId: string
       platforms: string[]
       scheduledAt?: string
+      adSchedule?: { days: number[]; startHour: number; endHour: number }
     }
 
     const creative = await prisma.creative.findUnique({ where: { id: creativeId } })
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
             platform: platform as never,
             status: 'queued',
             scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+            adSchedule: adSchedule ?? undefined,
           },
         })
       )

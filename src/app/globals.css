@@ -1,80 +1,206 @@
 @import "tailwindcss";
 
-@variant dark (&:where(.dark, .dark *));
-
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
+
+  /* Hopcharge brand palette — exact values from hopcharge.com stylesheet */
+  --color-brand:         #222e53;
+  --color-brand-dark:    #18214d;
+  --color-brand-darker:  #0f1a34;
+  --color-brand-muted:   #3e4462;
+  --color-brand-accent:  #e75a7c;
+  --color-brand-bg:      #f4f7fc;
+  --color-brand-surface: #eff2f6;
+  --color-brand-border:  #dde5ed;
+  --color-brand-divider: #dfe4ea;
 }
 
 * {
   box-sizing: border-box;
 }
 
-body {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+html {
+  scrollbar-gutter: stable;
 }
+
+body {
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  color: #18214d;
+  background-color: #f4f7fc;
+}
+
+/* ── Hopcharge button base — matches website: border-radius 2px, 0.2s transition ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #222e53;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 1.25rem;
+  height: 40px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary:hover   { background-color: #18214d; }
+.btn-primary:active  { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  color: #3e4462;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 1rem;
+  height: 40px;
+  border-radius: 2px;
+  border: 1px solid #dde5ed;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover  { color: #18214d; border-color: #3e4462; }
+.btn-secondary:active { transform: scale(0.97); }
+.btn-secondary:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Card — matches website card style ── */
+.card {
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #dde5ed;
+  box-shadow: 0 4px 12px -4px rgba(34, 46, 83, 0.08);
+}
+.card-surface {
+  background-color: #eff2f6;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+/* ── Form inputs — matches website input style ── */
+.input {
+  font-size: 14px;
+  font-weight: 400;
+  color: #18214d;
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #eff2f6;
+  background-color: #eff2f6;
+  padding: 0 12px;
+  transition: border 0.2s;
+  outline: none;
+  font-family: var(--font-nunito), system-ui, sans-serif;
+}
+.input:focus, .input:hover { border-color: #3e4462; }
+.input::placeholder { color: #3e4462; font-weight: 300; }
+
+/* ── Select — same as input ── */
+select.input { appearance: none; cursor: pointer; }
+
+/* ── Chart theming ── */
+:root {
+  --chart-grid: #dde5ed;
+  --chart-tick: #3e4462;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #dde5ed;
+  --chart-tooltip-label: #18214d;
+}
+
+/* ── Page content fade-in ── */
+@keyframes page-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-page { animation: page-in 0.22s ease forwards; }
+
+/* ── Trend dot pulse ── */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+.animate-pulse-soft { animation: soft-pulse 2s ease-in-out infinite; }
+
+/* ── Right-side drawer slide-in / slide-out ── */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.26s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+.animate-slide-out-right {
+  animation: slide-out-right 0.22s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+/* ── Overlay/backdrop fade-in / fade-out ── */
+@keyframes fade-overlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-overlay { animation: fade-overlay 0.2s ease forwards; }
+
+@keyframes fade-out-overlay {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.animate-fade-out-overlay { animation: fade-out-overlay 0.2s ease forwards; }
+
+/* ── Modal scale+fade in / out ── */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-modal-in {
+  animation: modal-in 0.24s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+@keyframes modal-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.96) translateY(-6px); }
+}
+.animate-modal-out {
+  animation: modal-out 0.18s ease-in forwards;
+}
+
+/* ── Collapsible expand / collapse (animates height both ways) ──
+   Uses the grid-rows 0fr→1fr trick so it works with dynamic content height
+   without measuring. Wrap content in .collapsible > .collapsible-inner. */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.collapsible.open { grid-template-rows: 1fr; }
+.collapsible > .collapsible-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Reveal: fade + slight rise, for rows/items appearing on expand ── */
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-reveal { animation: reveal-in 0.22s ease forwards; }
+
+/* ── Chevron rotation for expand toggles ── */
+.chevron-rotate { transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.chevron-rotate.open { transform: rotate(180deg); }
 
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* Chart theming */
-:root {
-  --chart-grid: #e5e7eb;
-  --chart-tick: #9ca3af;
-  --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-border: #e5e7eb;
-  --chart-tooltip-label: #111827;
-}
-
-.dark {
-  --chart-grid: #27272a;
-  --chart-tick: #71717a;
-  --chart-tooltip-bg: #18181b;
-  --chart-tooltip-border: #3f3f46;
-  --chart-tooltip-label: #ffffff;
-}
-
-/* Page content fade-in */
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.animate-page {
-  animation: page-in 0.22s ease forwards;
-}
-
-/* Trend dot pulse */
-@keyframes soft-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.55; }
-}
-
-.animate-pulse-soft {
-  animation: soft-pulse 2s ease-in-out infinite;
-}
-
-/* Right-side drawer slide-in */
-@keyframes slide-in-right {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* Overlay fade-in */
-@keyframes fade-overlay {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.animate-fade-overlay {
-  animation: fade-overlay 0.18s ease forwards;
 }

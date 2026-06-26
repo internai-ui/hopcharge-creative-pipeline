@@ -10,9 +10,9 @@ const SESSION_FILE = path.join(process.cwd(), '.browser-session.json')
 const CONFIG_FILE  = path.join(process.cwd(), '.browser-config.json')
 const LOG_DIR = path.join(process.cwd(), 'storage', 'browser-logs')
 
-// Use the project-local tsx binary — more reliable than `npx tsx` in spawned processes
+// Use the project-local tsx binary - more reliable than `npx tsx` in spawned processes
 const TSX_BIN = path.join(process.cwd(), 'node_modules', '.bin', 'tsx')
-// Script path relative to cwd — avoids __dirname resolving to .next/server
+// Script path relative to cwd - avoids __dirname resolving to .next/server
 const AUTOMATION_SCRIPT = path.join(process.cwd(), 'src', 'lib', 'plugins', 'browser', 'automate-kling.ts')
 
 /**
@@ -70,7 +70,7 @@ export class BrowserVideoGenerator implements VideoGeneratorPlugin {
 
     if (child.pid) {
       writeJob({ id: jobId, prompt, status: 'pending', startedAt: Date.now(), pid: child.pid })
-      console.log(`[browser] Job ${jobId} started — PID ${child.pid} — log: ${logFile}`)
+      console.log(`[browser] Job ${jobId} started - PID ${child.pid} - log: ${logFile}`)
     } else {
       writeJob({ id: jobId, prompt, status: 'failed', error: 'Failed to spawn automation process', startedAt: Date.now() })
       throw new Error('Failed to spawn browser automation process')

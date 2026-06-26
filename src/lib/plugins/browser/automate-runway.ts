@@ -1,5 +1,5 @@
 /**
- * Runway ML web automation — runs as a child process.
+ * Runway ML web automation - runs as a child process.
  * Drives app.runwayml.com to generate videos using the free web interface.
  *
  * Reads JOB_ID, PROMPT, BROWSER_SESSION_FILE, BROWSER_CONFIG_FILE from env.
@@ -34,7 +34,7 @@ async function shot(page: import('playwright').Page, name: string) {
 /**
  * Return the first visible locator from a candidate list, skipping any that
  * fail to parse. The setup script can save unstable React Aria IDs (which
- * contain colons) or unquoted attribute selectors with spaces — both are
+ * contain colons) or unquoted attribute selectors with spaces - both are
  * invalid CSS and make .count()/.waitFor() throw, so we must guard each one.
  */
 async function findFirst(
@@ -46,7 +46,7 @@ async function findFirst(
     try {
       const el = page.locator(sel).first()
       if (await el.count() > 0 && await el.isVisible().catch(() => false)) return el
-    } catch { /* invalid/unparseable selector — skip to next candidate */ }
+    } catch { /* invalid/unparseable selector - skip to next candidate */ }
   }
   return null
 }

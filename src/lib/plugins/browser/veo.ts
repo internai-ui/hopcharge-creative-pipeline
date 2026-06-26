@@ -1,3 +1,4 @@
+import { buildVideoPrompt } from '../prompt-constants'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
@@ -21,14 +22,7 @@ export class VeoBrowserGenerator implements VideoGeneratorPlugin {
   name = 'browser-veo'
 
   private buildPrompt(idea: Idea): string {
-    return [
-      idea.videoVisual,
-      'Hopcharge ad video — India\'s on-demand doorstep EV charging service.',
-      'A branded white-and-blue Hopcharge mobile charging van arrives at a modern Delhi-NCR apartment complex or gated colony.',
-      'Indian urban professional (25–40) connects their Tata EV — calm, effortless.',
-      'Gurugram or Noida cityscape backdrop: glass towers, wide clean roads, golden hour or bright daylight.',
-      'Cinematic lighting, smooth camera movement, aspirational tech-forward mood, high production quality. 9:16 vertical.',
-    ].join(' ')
+    return buildVideoPrompt(idea.videoVisual, { brief: true })
   }
 
   async submitJob({ idea }: { idea: Idea; referenceAssets?: string[] }): Promise<{ jobId: string }> {
@@ -60,7 +54,7 @@ export class VeoBrowserGenerator implements VideoGeneratorPlugin {
 
     if (child.pid) {
       writeJob({ id: jobId, prompt, status: 'pending', startedAt: Date.now(), pid: child.pid })
-      console.log(`[veo] Job ${jobId} started — PID ${child.pid} — log: ${logFile}`)
+      console.log(`[veo] Job ${jobId} started - PID ${child.pid} - log: ${logFile}`)
     } else {
       writeJob({ id: jobId, prompt, status: 'failed', error: 'Failed to spawn', startedAt: Date.now() })
       throw new Error('Failed to spawn Veo automation process')

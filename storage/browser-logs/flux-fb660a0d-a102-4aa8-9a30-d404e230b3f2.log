@@ -1,0 +1,2 @@
+[flux] Job flux-fb660a0d-a102-4aa8-9a30-d404e230b3f2 failed: page.waitForTimeout: Target page, context or browser has been closed
+    at run (/home/hackoverflow/Documents/Hopcharge/hopcharge-creative-pipeline/src/lib/plugins/browser/automate-flux.ts:114:16)

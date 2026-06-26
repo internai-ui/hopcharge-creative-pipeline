@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { deriveFirstFrameVisual } from '@/lib/plugins/prompt-constants'
 import { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const orderBy: Record<string, string>[] = []
     if (sortBy === 'rank') orderBy.push({ rank: 'asc' })
-    else if (sortBy === 'performance') orderBy.push({ performanceScore: 'desc' })
+    else if (sortBy === 'performance') orderBy.push({ performanceScore: 'asc' }) // lower CPL = better
     else if (sortBy === 'trendScore') orderBy.push({ trendScore: 'desc' })
     else if (sortBy === 'created') orderBy.push({ createdAt: 'desc' })
 
@@ -39,7 +40,11 @@ export async function POST(req: NextRequest) {
         hook: body.hook,
         imageVisual: body.imageVisual,
         videoVisual: body.videoVisual,
+        videoFirstFrame: body.videoFirstFrame?.trim() || deriveFirstFrameVisual(body.videoVisual ?? ''),
         cta: body.cta,
+        // Required - the manual drawer enforces these; fall back defensively.
+        primaryText: body.primaryText?.trim() || body.hook,
+        headline: body.headline?.trim() || body.title,
         angle: body.angle ?? 'pain_point',
         funnelStage: body.funnelStage ?? null,
         nudge: body.nudge,

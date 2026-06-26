@@ -110,7 +110,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     if (trendFilter === 'stale' && (idea.trendScore === null || idea.trendScore >= 0.3)) return false
     return true
   }).sort((a, b) => {
-    if (sortBy === 'performance') return (b.performanceScore ?? 0) - (a.performanceScore ?? 0)
+    if (sortBy === 'performance') return (a.performanceScore ?? Infinity) - (b.performanceScore ?? Infinity) // lower CPL = better
     if (sortBy === 'trendScore') return (b.trendScore ?? 0) - (a.trendScore ?? 0)
     if (sortBy === 'created') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     return a.rank - b.rank
@@ -293,14 +293,14 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     setIdeas(ideasData)
   }, [])
 
-  const selectClass = "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-sm text-gray-700 dark:text-zinc-300 px-3 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+  const selectClass = "bg-white border border-brand-border text-sm text-brand-dark px-3 py-1.5 rounded-lg focus:outline-none focus:border-brand transition-colors"
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5 animate-page">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Ideas</h1>
-          <p className="text-sm text-gray-400 dark:text-zinc-500 mt-0.5">{ideas.length} ideas · drag to reorder</p>
+          <h1 className="text-2xl font-semibold text-brand-dark">Ideas</h1>
+          <p className="text-sm text-brand-muted mt-0.5">{ideas.length} ideas · drag to reorder</p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <div className="flex items-center gap-2">
@@ -308,31 +308,31 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
               onClick={handleImportMeta}
               disabled={importing}
               title="Pull historical Hopcharge ads from Meta and use CPL data to seed the idea generator"
-              className="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 px-3 py-2 rounded-lg transition-all duration-150 disabled:opacity-50"
+              className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {importing ? 'Importing...' : 'Import Meta history'}
             </button>
             <button
               onClick={() => setAddDrawerOpen(true)}
-              className="text-sm text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-500 px-3 py-2 rounded-lg transition-all duration-150"
+              className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200"
             >
               + Add manually
             </button>
             <button
               onClick={() => setDrawerOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 shadow-sm"
+              className="flex items-center gap-2 bg-brand hover:bg-brand-dark active:scale-[0.97] text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm"
             >
               + Generate ideas
             </button>
           </div>
           {baseline !== null && (
-            <span className="text-xs text-right text-gray-400 dark:text-zinc-500">
+            <span className="text-xs text-right text-brand-muted">
               {baseline.total === 0 ? (
                 'Idea baseline not seeded yet'
               ) : (
                 <>
                   Idea baseline:{' '}
-                  <span className={baseline.successful > 0 ? 'text-emerald-600 dark:text-emerald-500 font-medium' : ''}>
+                  <span className={baseline.successful > 0 ? 'text-emerald-600 font-medium' : ''}>
                     {baseline.successful} ads under Rs100 CPL
                   </span>
                   {' '}of {baseline.total} imported
@@ -359,17 +359,17 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       )}
 
       {importResult && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl px-4 py-4">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+              <p className="text-sm font-semibold text-emerald-800">
                 Meta history imported successfully
               </p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
+              <p className="text-xs text-emerald-600 mt-0.5">
                 Idea generator baseline updated with your proven ad concepts.
               </p>
             </div>
-            <button onClick={() => setImportResult(null)} className="text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 text-xs shrink-0">Dismiss</button>
+            <button onClick={() => setImportResult(null)} className="text-emerald-500 hover:text-emerald-700 text-xs shrink-0">Dismiss</button>
           </div>
           <div className="grid grid-cols-4 gap-3 mt-3">
             {[
@@ -379,21 +379,21 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
               { label: 'Errors', value: importResult.errors, warn: importResult.errors > 0 },
             ].map(({ label, value, highlight, warn }) => (
               <div key={label} className={`rounded-lg px-3 py-2 text-center ${
-                highlight ? 'bg-emerald-100 dark:bg-emerald-900/40' :
-                warn && value > 0 ? 'bg-amber-50 dark:bg-amber-950/30' :
-                'bg-white dark:bg-zinc-900/50'
+                highlight ? 'bg-emerald-100' :
+                warn && value > 0 ? 'bg-amber-50' :
+                'bg-white'
               }`}>
                 <p className={`text-lg font-semibold tabular-nums ${
-                  highlight ? 'text-emerald-700 dark:text-emerald-300' :
-                  warn && value > 0 ? 'text-amber-700 dark:text-amber-400' :
-                  'text-gray-900 dark:text-white'
+                  highlight ? 'text-emerald-700' :
+                  warn && value > 0 ? 'text-amber-700' :
+                  'text-brand-dark'
                 }`}>{value}</p>
-                <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">{label}</p>
+                <p className="text-xs text-brand-muted mt-0.5">{label}</p>
               </div>
             ))}
           </div>
           {importResult.successful === 0 && (
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">
+            <p className="text-xs text-amber-600 mt-3">
               No ads with CPL under Rs100 were found. The idea generator will still use your ad concepts as context, but none are marked as high-performers yet. Consider raising the threshold in .env.local (CPL_SUCCESS_THRESHOLD).
             </p>
           )}
@@ -428,19 +428,19 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
 
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={selectClass}>
           <option value="rank">Sort by rank</option>
-          <option value="performance">Sort by ROAS</option>
+          <option value="performance">Sort by CPL</option>
           <option value="trendScore">Sort by trend</option>
           <option value="created">Sort by date</option>
         </select>
 
-        <span className="text-xs text-gray-400 dark:text-zinc-600 ml-auto">{filteredIdeas.length} shown</span>
+        <span className="text-xs text-brand-muted ml-auto">{filteredIdeas.length} shown</span>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={filteredIdeas.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {filteredIdeas.length === 0 ? (
-              <div className="text-center py-16 text-gray-400 dark:text-zinc-500">
+              <div className="text-center py-16 text-brand-muted">
                 <p className="text-lg">No ideas yet</p>
                 <p className="text-sm mt-1">Click &quot;Generate ideas&quot; to get started</p>
               </div>

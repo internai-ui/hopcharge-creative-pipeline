@@ -14,3 +14,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return Response.json({ error: 'Failed to fetch post', details: String(err) }, { status: 500 })
   }
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    await prisma.post.delete({ where: { id } })
+    return Response.json({ ok: true })
+  } catch (err) {
+    return Response.json({ error: 'Failed to delete post', details: String(err) }, { status: 500 })
+  }
+}

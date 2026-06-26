@@ -2,7 +2,7 @@ import type { ImageGeneratorPlugin } from '../interfaces'
 
 const BASE = 'https://api.replicate.com/v1'
 
-// Flux Schnell — fastest, cheapest Flux model (~$0.003/image)
+// Flux Schnell - fastest, cheapest Flux model (~$0.003/image)
 // Override via REPLICATE_FLUX_MODEL env var for flux-dev (higher quality) or flux-pro
 const DEFAULT_MODEL = 'black-forest-labs/flux-schnell'
 
@@ -35,7 +35,7 @@ export class ReplicateFluxGenerator implements ImageGeneratorPlugin {
       body: JSON.stringify({
         input: {
           prompt,
-          aspect_ratio: '9:16',    // vertical — matches ad format
+          aspect_ratio: '9:16',    // vertical - matches ad format
           output_format: 'jpg',
           output_quality: 90,
           num_outputs: 1,

@@ -51,10 +51,10 @@ export class FluxBrowserGenerator implements ImageGeneratorPlugin {
       throw new Error('Failed to spawn Flux browser automation')
     }
 
-    console.log(`[flux] Job ${jobId} started — PID ${child.pid} — log: ${logFile}`)
+    console.log(`[flux] Job ${jobId} started - PID ${child.pid} - log: ${logFile}`)
     child.unref()
 
-    // Poll the job file until complete — image gen is fast (15–60s)
+    // Poll the job file until complete - image gen is fast (15–60s)
     const deadline = Date.now() + 3 * 60 * 1000 // 3 min max
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 3000))

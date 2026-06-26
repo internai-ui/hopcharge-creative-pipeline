@@ -1,5 +1,6 @@
 import type { VideoGeneratorPlugin } from '../interfaces'
 import type { Idea } from '@prisma/client'
+import { buildVideoPrompt } from '../prompt-constants'
 
 const BASE = 'https://api.dev.runwayml.com/v1'
 const RUNWAY_VERSION = '2024-11-06'
@@ -13,15 +14,7 @@ interface RunwayTask {
 }
 
 function buildPrompt(idea: Idea): string {
-  return [
-    idea.videoVisual,
-    'Hopcharge ad video — India\'s on-demand doorstep EV charging service.',
-    'A branded white-and-blue Hopcharge mobile charging van pulls up to a modern Delhi-NCR apartment complex or gated colony.',
-    'An Indian urban professional (25–40) calmly connects their Tata EV — effortless, stress-free.',
-    'Backdrop: Gurugram glass towers, clean wide roads, golden-hour or crisp daylight.',
-    'Cinematic camera — slow dolly push, overhead establishing shot, or close-up on the satisfying charging connector click.',
-    'Aspirational, tech-forward mood. High production quality, smooth movement. 9:16 vertical format.',
-  ].join(' ')
+  return buildVideoPrompt(idea.videoVisual)
 }
 
 export class RunwayGenerator implements VideoGeneratorPlugin {

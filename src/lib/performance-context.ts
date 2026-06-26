@@ -2,8 +2,8 @@ import { prisma } from './db'
 import type { PerformanceContext, AdConcepts } from './plugins/interfaces'
 import type { Idea, PerformanceSnapshot } from '@prisma/client'
 
-function getSnapshotRoas(snap: PerformanceSnapshot): number {
-  return snap.roas ? Number(snap.roas) : 0
+function getSnapshotCpl(snap: PerformanceSnapshot): number | null {
+  return snap.cpl != null ? Number(snap.cpl) : null
 }
 
 async function fetchHistoricalBaseline(): Promise<PerformanceContext['historicalBaseline']> {
@@ -48,24 +48,26 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
     .filter((p: PostItem) => p.snapshots.length > 0)
     .map((p: PostItem) => {
       const totalSpend = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.spend), 0)
-      const avgRoas = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + getSnapshotRoas(snap), 0) / p.snapshots.length
+      const cplValues = p.snapshots.map(getSnapshotCpl).filter((v): v is number => v != null && v > 0)
+      // Lower CPL is better; posts with no lead data sort last (Infinity).
+      const avgCpl = cplValues.length ? cplValues.reduce((s, v) => s + v, 0) / cplValues.length : Infinity
       const avgCtr = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.ctr), 0) / p.snapshots.length
 
       let daysToFatigue: number | null = null
       for (let i = 1; i < p.snapshots.length; i++) {
         const freq = Number(p.snapshots[i].frequency)
-        const initialRoas = getSnapshotRoas(p.snapshots[0])
-        const currentRoas = getSnapshotRoas(p.snapshots[i])
-        const roasDrop = initialRoas > 0 && currentRoas / initialRoas < 0.7
-        if (freq > 3 && roasDrop) {
+        const initialCpl = getSnapshotCpl(p.snapshots[0])
+        const currentCpl = getSnapshotCpl(p.snapshots[i])
+        const cplRose = initialCpl != null && initialCpl > 0 && currentCpl != null && currentCpl / initialCpl > 1.3
+        if (freq > 3 && cplRose) {
           daysToFatigue = i
           break
         }
       }
 
-      return { post: p, avgRoas, avgCtr, totalSpend, daysToFatigue }
+      return { post: p, avgCpl, avgCtr, totalSpend, daysToFatigue }
     })
-    .sort((a: { avgRoas: number }, b: { avgRoas: number }) => b.avgRoas - a.avgRoas)
+    .sort((a: { avgCpl: number }, b: { avgCpl: number }) => a.avgCpl - b.avgCpl)
 
   type MetricItem = typeof withMetrics[number]
 
@@ -76,7 +78,7 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
   const topPerformerDetails: PerformanceContext['topPerformers'] = []
   const poorPerformerDetails: PerformanceContext['poorPerformers'] = []
 
-  // Derive patterns directly from data — no Claude call needed here
+  // Derive patterns directly from data - no Claude call needed here
   let winningPatterns: string[] = topThree.length > 0
     ? [...new Set(topThree.map((m: MetricItem) => m.post.creative.idea.angle))].slice(0, 3)
     : ['hook_first_3_seconds', 'ugc_style', 'pain_point_angle']
@@ -86,7 +88,7 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
   for (const m of topThree) {
     topPerformerDetails.push({
       idea: m.post.creative.idea as Idea,
-      roas: m.avgRoas,
+      cpl: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
       ctr: m.avgCtr,
       fatigueRate: m.daysToFatigue !== null && m.daysToFatigue < 7 ? 'fast' : m.daysToFatigue !== null ? 'slow' : 'none',
       patterns: winningPatterns,
@@ -96,8 +98,8 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
   for (const m of bottomThree) {
     poorPerformerDetails.push({
       idea: m.post.creative.idea as Idea,
-      roas: m.avgRoas,
-      failureHypothesis: `Low ROAS of ${m.avgRoas.toFixed(2)} with angle "${m.post.creative.idea.angle}"`,
+      cpl: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
+      failureHypothesis: `High CPL of ₹${Number.isFinite(m.avgCpl) ? m.avgCpl.toFixed(0) : '-'} with angle "${m.post.creative.idea.angle}"`,
     })
   }
 

@@ -1,5 +1,5 @@
 /**
- * Flux browser automation — runs as a child process.
+ * Flux browser automation - runs as a child process.
  * Drives HuggingFace FLUX.1-schnell (free, no account needed) to generate images.
  *
  * Reads JOB_ID, PROMPT, BROWSER_CONFIG_FILE from env.
@@ -89,7 +89,7 @@ async function run() {
   page.on('response', (response) => {
     const url = response.url()
     const ct  = response.headers()['content-type'] ?? ''
-    // Capture any image response — ElevenLabs CDN URLs may not have .jpg/.webp in path
+    // Capture any image response - ElevenLabs CDN URLs may not have .jpg/.webp in path
     if (!url.startsWith('blob:') && ct.startsWith('image/')) {
       capturedImageUrls.push(url)
       console.log(`[flux] Intercepted image [${ct}]: ${url.slice(0, 120)}`)
@@ -106,7 +106,7 @@ async function run() {
         break
       } catch (err) {
         navError = err as Error
-        console.log(`[flux] Navigation attempt ${attempt} failed: ${navError.message} — retrying...`)
+        console.log(`[flux] Navigation attempt ${attempt} failed: ${navError.message} - retrying...`)
         await page.waitForTimeout(3000)
       }
     }
@@ -158,7 +158,7 @@ async function run() {
     await shot(page, '02-prompt-filled')
 
     // ── Step 3: Click generate ──
-    // Gradio's run button — try common selectors
+    // Gradio's run button - try common selectors
     let generated = false
     for (const sel of [generateSelector, 'button.run-button', '#component-5 button', 'button:has-text("Run")', 'button[type="submit"]']) {
       const btn = page.locator(sel).first()
@@ -174,10 +174,10 @@ async function run() {
     }
     await shot(page, '03-submitted')
 
-    // Flush network captures — promo banners, gallery thumbnails captured before submit
+    // Flush network captures - promo banners, gallery thumbnails captured before submit
     capturedImageUrls.length = 0
 
-    // ElevenLabs navigates to History tab after submit — give it time to land
+    // ElevenLabs navigates to History tab after submit - give it time to land
     await page.waitForTimeout(5000)
     await shot(page, '03b-history-tab')
 
@@ -204,7 +204,7 @@ async function run() {
       await page.waitForTimeout(600)
     }
 
-    // Flush again — the popup may have triggered more image loads
+    // Flush again - the popup may have triggered more image loads
     capturedImageUrls.length = 0
 
     // ── Step 4: Wait for "X% done" to clear, then capture the image ──
@@ -219,25 +219,25 @@ async function run() {
       const elapsed = Math.round((Date.now() - startedAt) / 1000)
       await shot(page, `04-poll-${elapsed}s`)
 
-      // Check if "X% done" text is still visible — if yes, still generating
+      // Check if "X% done" text is still visible - if yes, still generating
       const progressText = await page.evaluate(() => document.body.innerText.match(/\d+%\s*done/i)?.[0] ?? null)
       if (progressText) {
-        console.log(`[flux] ${progressText} — still generating, waiting...`)
+        console.log(`[flux] ${progressText} - still generating, waiting...`)
         capturedImageUrls.length = 0 // flush again during wait
         continue
       }
 
-      // No progress text — generation done. Now wait for all images to fully load.
+      // No progress text - generation done. Now wait for all images to fully load.
       if (!generationComplete) {
         generationComplete = true
-        console.log('[flux] Generation complete — waiting for all images to load...')
+        console.log('[flux] Generation complete - waiting for all images to load...')
         capturedImageUrls.length = 0  // flush everything before the final load
 
-        // ElevenLabs loads all images shortly after progress clears — give it time
+        // ElevenLabs loads all images shortly after progress clears - give it time
         await page.waitForTimeout(8000)
       }
 
-      // Collect unique CDN image URLs — filter out small placeholder/skeleton images
+      // Collect unique CDN image URLs - filter out small placeholder/skeleton images
       // Real ElevenLabs images come from CDN (long URLs, large files)
       // Placeholder skeletons are CSS gradients (not network requests) or tiny files
       const unique = [...new Set(capturedImageUrls)].filter(url =>
@@ -297,11 +297,11 @@ async function run() {
         }
 
         await shot(page, '05-done')
-        console.log(`[flux] Job ${JOB_ID} complete — ${candidates.length} image(s) downloaded`)
-        return  // exit the run() function — already wrote job file
+        console.log(`[flux] Job ${JOB_ID} complete - ${candidates.length} image(s) downloaded`)
+        return  // exit the run() function - already wrote job file
       }
 
-      // Keep waiting — no images captured yet after generation completed
+      // Keep waiting - no images captured yet after generation completed
     }
 
     if (!imageUrl) {

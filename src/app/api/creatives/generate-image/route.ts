@@ -1,26 +1,14 @@
 import { prisma } from '@/lib/db'
 import { getImageGenerator } from '@/lib/plugins/registry'
 import { storage } from '@/lib/storage'
+import { buildImagePrompt } from '@/lib/plugins/prompt-constants'
 import { NextRequest } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-function buildImagePrompt(idea: { hook: string; imageVisual: string; angle: string }): string {
-  return [
-    idea.imageVisual,
-    'Hopcharge ad — India\'s on-demand doorstep EV charging service: a branded white-and-blue mobile charging van comes to the customer.',
-    'Setting: modern Delhi-NCR — upscale apartment complex, gated residential colony, or premium parking bay.',
-    'Subject: confident Indian urban professional, 25–40 years old, relaxed beside their Tata EV.',
-    'Brand aesthetic: clean, aspirational, tech-forward — white, electric blue, crisp.',
-    'High-end advertising photography, cinematic lighting, sharp focus.',
-    `Emotional tone: ${idea.angle.replace(/_/g, ' ')}.`,
-    'Vertical 9:16, no text overlay, no watermark.',
-  ].join(' ')
-}
-
 async function readImageBuffer(fileUrl: string): Promise<{ buffer: Buffer; ext: string }> {
   // Browser-based generators save to local storage and return a relative path like
-  // /api/browser-images/flux-xxx.webp — read from disk instead of fetching via HTTP
+  // /api/browser-images/flux-xxx.webp - read from disk instead of fetching via HTTP
   if (fileUrl.startsWith('/api/browser-images/')) {
     const filename = fileUrl.replace('/api/browser-images/', '')
     const localPath = path.join(process.cwd(), 'storage', 'browser-images', filename)
@@ -64,8 +52,35 @@ export async function POST(req: NextRequest) {
     }
 
     const generator = getImageGenerator()
-    const prompt = buildImagePrompt(idea)
+    const prompt = buildImagePrompt(idea.imageVisual, { angle: idea.angle })
 
+    // Async path: for generators that support it (e.g. Higgsfield), submit the job
+    // and return immediately with a "generating" creative. A poller (the Review page
+    // auto-poll + poll-creative-status job) downloads the image once it's ready, so
+    // this request never blocks for the full generation time.
+    if (generator.submitJob) {
+      const { jobId } = await generator.submitJob({ prompt })
+      const creative = await prisma.creative.create({
+        data: {
+          ideaId,
+          mediaType: 'image',
+          status: 'generating',
+          generatorName: generator.name,
+          generatorJobId: jobId,
+        },
+      })
+      await prisma.idea.update({ where: { id: ideaId }, data: { status: 'in_production' } })
+      await prisma.agentAction.create({
+        data: {
+          actionType: 'image_generation_started',
+          decisionRationale: `Image generation queued for idea "${idea.title}" via ${generator.name} (job ${jobId})`,
+          relatedEntityId: creative.id,
+        },
+      })
+      return Response.json([creative], { status: 201 })
+    }
+
+    // Synchronous path (Replicate / browser / stub): blocks until the image returns.
     const { fileUrl, fileUrls } = await generator.generate({ prompt })
 
     // Use all image URLs if available (e.g. ElevenLabs returns 4), otherwise just the one

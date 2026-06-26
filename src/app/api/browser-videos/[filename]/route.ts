@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { filename } = await params
 
-  // Sanitize — only allow alphanumeric, hyphens, dots
+  // Sanitize - only allow alphanumeric, hyphens, dots
   if (!/^[\w.-]+$/.test(filename)) {
     return new Response('Invalid filename', { status: 400 })
   }

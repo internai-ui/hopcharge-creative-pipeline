@@ -1,10 +1,11 @@
 import crypto from 'crypto'
 import type { VideoGeneratorPlugin } from '../interfaces'
 import type { Idea } from '@prisma/client'
+import { buildVideoPrompt, NEGATIVE_VIDEO } from '../prompt-constants'
 
 const BASE = 'https://api.klingai.com'
 
-// Kling uses HS256 JWT auth — generate a fresh token per request (expires in 30 min)
+// Kling uses HS256 JWT auth - generate a fresh token per request (expires in 30 min)
 function generateToken(): string {
   const accessKey = process.env.KLING_ACCESS_KEY!
   const secretKey = process.env.KLING_SECRET_KEY!
@@ -26,27 +27,10 @@ function generateToken(): string {
 }
 
 function buildPrompt(idea: Idea): { prompt: string; negative_prompt: string } {
-  // Kling needs a visual description, not dialogue — combine the visual field
-  // with context so the model produces something usable as an ad
-  const parts = [
-    idea.videoVisual,
-    'Hopcharge ad video — India\'s on-demand doorstep EV charging service.',
-    'A branded white-and-blue Hopcharge mobile charging van arrives at a modern Delhi-NCR apartment complex or gated colony.',
-    'Indian urban professional (25–40) connects their Tata EV — calm, effortless.',
-    'Gurugram or Noida cityscape backdrop: glass towers, wide clean roads, golden hour or bright daylight.',
-    'Cinematic lighting, smooth camera movement, aspirational tech-forward mood, high production quality.',
-  ]
-  const prompt = parts.join(' ')
-
-  const negative_prompt = [
-    'blurry, low quality, grainy, shaky camera',
-    'watermark, text overlay, subtitles, logo',
-    'overexposed, underexposed, distorted',
-    'cartoon, animation, drawing',
-    'petrol station, gas pump, rural setting, Western suburb, non-Indian setting',
-  ].join(', ')
-
-  return { prompt, negative_prompt }
+  return {
+    prompt: buildVideoPrompt(idea.videoVisual),
+    negative_prompt: NEGATIVE_VIDEO,
+  }
 }
 
 interface KlingSubmitResponse {

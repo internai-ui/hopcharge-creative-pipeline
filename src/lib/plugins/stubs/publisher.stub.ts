@@ -5,9 +5,9 @@ export class PublisherStub implements PublisherPlugin {
   name = 'stub'
   platform = 'meta' as const
 
-  async publish({ creative }: { creative: Creative }): Promise<{ externalPostId: string }> {
+  async publish({ creative }: { creative: Creative }): Promise<{ externalPostId: string; isDraft: boolean }> {
     await new Promise((r) => setTimeout(r, 200))
-    return { externalPostId: `stub-post-${creative.id}-${Date.now()}` }
+    return { externalPostId: `stub-post-${creative.id}-${Date.now()}`, isDraft: false }
   }
 
   async pause(_externalPostId: string): Promise<void> {

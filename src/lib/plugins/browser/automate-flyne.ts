@@ -1,5 +1,5 @@
 /**
- * Flyne.ai browser automation — runs as a child process.
+ * Flyne.ai browser automation - runs as a child process.
  * Drives https://flyne.ai to generate images.
  *
  * Reads JOB_ID, PROMPT, BROWSER_SESSION_FILE, BROWSER_CONFIG_FILE from env.
@@ -93,7 +93,7 @@ async function run() {
         break
       } catch (err) {
         navError = err as Error
-        console.log(`[flyne] Nav attempt ${attempt} failed — retrying...`)
+        console.log(`[flyne] Nav attempt ${attempt} failed - retrying...`)
         await page.waitForTimeout(3000)
       }
     }
@@ -115,7 +115,7 @@ async function run() {
       throw new Error(
         `Not on the image generation page. Current URL: ${currentUrl}\n` +
         `The saved creationUrl may be the homepage rather than the specific generator page.\n` +
-        `Run: npm run browser:setup:flyne — at Step 2, navigate TO the AI Image Generator ` +
+        `Run: npm run browser:setup:flyne - at Step 2, navigate TO the AI Image Generator ` +
         `(e.g. https://flyne.ai/ai-image-generator), select your model, then press Enter.`
       )
     }
@@ -200,7 +200,7 @@ async function run() {
     try {
       await generateBtn.click({ timeout: 8000 })
     } catch {
-      // Sidebar may intercept — use JS click to bypass
+      // Sidebar may intercept - use JS click to bypass
       await generateBtn.evaluate(node => (node as HTMLElement).click())
     }
     await shot(page, '04-submitted')
@@ -248,10 +248,10 @@ async function run() {
         continue
       }
 
-      // Looks done — wait for images to fully load
+      // Looks done - wait for images to fully load
       if (!generationComplete) {
         generationComplete = true
-        console.log('[flyne] Generation appears complete — waiting for images to load...')
+        console.log('[flyne] Generation appears complete - waiting for images to load...')
         capturedImageUrls.length = 0
         await page.waitForTimeout(6000)
       }
@@ -339,7 +339,7 @@ async function run() {
           startedAt: Date.now(),
         })
         await shot(page, '06-done')
-        console.log(`[flyne] Job ${JOB_ID} complete — ${candidates.length} image(s)`)
+        console.log(`[flyne] Job ${JOB_ID} complete - ${candidates.length} image(s)`)
         return
       }
     }

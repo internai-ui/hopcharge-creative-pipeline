@@ -1,10 +1,17 @@
 import { prisma } from '@/lib/db'
 import { getMetaAnalytics } from '@/lib/plugins/registry'
 import { upsertPipelineAd } from '@/lib/meta-historical'
+import { reconcilePosts } from './reconcile-posts'
 
 export async function syncPerformance(): Promise<void> {
+  // First reconcile against Ads Manager: any ad deleted on Meta's side is marked
+  // "deleted" here, which also drops it from the "posted" set fetched below.
+  await reconcilePosts()
+
+  // Only Meta posts - this job uses the Meta insights API. YouTube posts are
+  // synced separately (no YouTube analytics plugin yet).
   const posts = await prisma.post.findMany({
-    where: { status: 'posted', externalPostId: { not: null } },
+    where: { status: 'posted', externalPostId: { not: null }, platform: 'meta' },
     include: {
       creative: { include: { idea: true } },
       snapshots: { orderBy: { snapshotDate: 'desc' }, take: 10 },
@@ -30,7 +37,8 @@ export async function syncPerformance(): Promise<void> {
           reach: snapshot.reach,
           clicks: snapshot.clicks,
           spend: snapshot.spend,
-          roas: snapshot.roas,
+          cpl: snapshot.cpl,
+          leads: snapshot.leads,
           cpm: snapshot.cpm,
           ctr: snapshot.ctr,
           frequency: snapshot.frequency,
@@ -38,44 +46,36 @@ export async function syncPerformance(): Promise<void> {
         },
       })
 
-      // Extract CPL from rawData and update the historical baseline
-      const raw = snapshot.rawData as {
-        cost_per_action_type?: Array<{ action_type: string; value: string }>
-        actions?: Array<{ action_type: string; value: string }>
-      } | null
+      const threshold = Number(process.env.CPL_SUCCESS_THRESHOLD ?? 100)
 
-      const leadAction = process.env.META_LEAD_ACTION_TYPE ?? 'onsite_conversion.messaging_conversation_started_7d'
-      const cplEntry = raw?.cost_per_action_type?.find(a => a.action_type === leadAction)
-      if (cplEntry && post.externalPostId) {
-        const cpl = parseFloat(cplEntry.value)
-        const leadsEntry = raw?.actions?.find(a => a.action_type === leadAction)
-        const leads = leadsEntry ? parseInt(leadsEntry.value) : 0
-
+      // Update the historical baseline with this snapshot's CPL / leads
+      if (snapshot.cpl != null && post.externalPostId) {
         await upsertPipelineAd({
           metaAdId: post.externalPostId,
           adName: post.creative.idea.title,
           bodyText: post.creative.idea.hook,
           headlineText: post.creative.idea.title,
-          cpl,
-          leads,
+          cpl: Number(snapshot.cpl),
+          leads: snapshot.leads,
           spend: Number(snapshot.spend),
           snapshotDate: snapshot.snapshotDate,
         })
       }
 
-      // Fatigue check: frequency > 3 and ROAS dropped >30% from peak
+      // Fatigue check: frequency > 3 and CPL rose >30% above its best (lowest)
       const allSnaps = [...post.snapshots]
       if (allSnaps.length >= 3) {
-        const peakRoas = Math.max(...allSnaps.map((s) => Number(s.roas ?? 0)))
-        const latestRoas = Number(allSnaps[0].roas ?? 0)
+        const cpls = allSnaps.map((s) => (s.cpl != null ? Number(s.cpl) : null)).filter((v): v is number => v != null && v > 0)
+        const bestCpl = cpls.length ? Math.min(...cpls) : 0
+        const latestCpl = allSnaps[0].cpl != null ? Number(allSnaps[0].cpl) : null
         const latestFreq = Number(allSnaps[0].frequency ?? 0)
 
-        if (latestFreq > 3 && peakRoas > 0 && latestRoas / peakRoas < 0.7) {
+        if (latestFreq > 3 && bestCpl > 0 && latestCpl != null && latestCpl / bestCpl > 1.3) {
           await prisma.pipelineIssue.create({
             data: {
               severity: 'warning',
               stage: 'analytics',
-              description: `Creative fatigue detected on post ${post.id}: frequency ${latestFreq.toFixed(1)}, ROAS dropped ${Math.round((1 - latestRoas / peakRoas) * 100)}% from peak`,
+              description: `Creative fatigue detected on post ${post.id}: frequency ${latestFreq.toFixed(1)}, CPL rose ${Math.round((latestCpl / bestCpl - 1) * 100)}% above best (₹${bestCpl.toFixed(0)} → ₹${latestCpl.toFixed(0)})`,
               relatedEntityId: post.id,
               isResolved: false,
             },
@@ -83,12 +83,12 @@ export async function syncPerformance(): Promise<void> {
         }
 
         const lastThree = allSnaps.slice(0, 3)
-        if (lastThree.length === 3 && lastThree.every((s) => Number(s.roas ?? 0) < 1.0)) {
+        if (lastThree.length === 3 && lastThree.every((s) => s.cpl != null && Number(s.cpl) > threshold)) {
           await prisma.pipelineIssue.create({
             data: {
               severity: 'critical',
               stage: 'analytics',
-              description: `Post ${post.id} has had ROAS below 1.0 for 3 consecutive days`,
+              description: `Post ${post.id} has had CPL above ₹${threshold} for 3 consecutive days`,
               relatedEntityId: post.id,
               isResolved: false,
             },

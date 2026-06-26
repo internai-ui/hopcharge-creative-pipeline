@@ -13,14 +13,14 @@ export interface AdConcepts {
 export interface PerformanceContext {
   topPerformers: Array<{
     idea: Idea
-    roas: number
+    cpl: number
     ctr: number
     fatigueRate: 'slow' | 'fast' | 'none'
     patterns: string[]
   }>
   poorPerformers: Array<{
     idea: Idea
-    roas: number
+    cpl: number
     failureHypothesis: string
   }>
   fastFatiguers: Array<{
@@ -42,8 +42,16 @@ export interface IdeaSuggestion {
   hook: string
   imageVisual: string
   videoVisual: string
+  // Still prompt for the video's opening frame (0-3s hook shot) - rendered as the
+  // image2video first frame. Distinct from imageVisual (the finished poster).
+  videoFirstFrame?: string
   cta: string
+  // Meta ad copy: primaryText is the body above the creative, headline the
+  // bold line beneath it. Both are required for a complete ad.
+  primaryText: string
+  headline: string
   angle: string
+  funnelStage?: 'TOF' | 'MOF' | 'BOF'
   trendTags: string[]
   rationale?: string
 }
@@ -82,6 +90,24 @@ export interface ImageGeneratorPlugin {
     prompt: string
     referenceAssets?: string[]
   }): Promise<{ fileUrl: string; fileUrls?: string[] }>
+  // Optional async path for slow generators: submit returns immediately with a job
+  // id, and a poller fetches the result later. When present, the image route uses
+  // this instead of generate() so the HTTP request doesn't block for minutes.
+  submitJob?(params: {
+    prompt: string
+    referenceAssets?: string[]
+  }): Promise<{ jobId: string }>
+  pollJobStatus?(jobId: string): Promise<{
+    status: 'pending' | 'processing' | 'complete' | 'failed'
+    fileUrls?: string[]
+    error?: string
+  }>
+}
+
+export interface AdSchedule {
+  days: number[]      // 0 = Sunday … 6 = Saturday
+  startHour: number   // 0–23
+  endHour: number     // 1–24
 }
 
 export interface PublisherPlugin {
@@ -89,10 +115,13 @@ export interface PublisherPlugin {
   platform: 'meta' | 'youtube'
   publish(params: {
     creative: Creative
-    caption?: string
+    caption?: string        // ad primary text (body)
+    headline?: string       // ad headline (bold line under the creative)
+    funnelStage?: 'TOF' | 'MOF' | 'BOF' | null  // drives optimization goal
     scheduledAt?: Date
+    adSchedule?: AdSchedule
     targetingOptions?: Record<string, unknown>
-  }): Promise<{ externalPostId: string }>
+  }): Promise<{ externalPostId: string; isDraft?: boolean }>
   pause(externalPostId: string): Promise<void>
   scale(externalPostId: string, budgetMultiplier: number): Promise<void>
 }
@@ -110,6 +139,9 @@ export interface TrendDataPlugin {
   fetchTrends(params: {
     topics: string[]
     region?: string
+    // Optional keyword included in every request to make scores comparable across
+    // the 5-keyword chunks Google Trends imposes (see GoogleTrendsFetcher).
+    anchor?: string
   }): Promise<{
     scores: Record<string, number>
     risingTopics: string[]

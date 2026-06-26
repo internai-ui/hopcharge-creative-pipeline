@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         hook: body.hook,
         imageVisual: body.imageVisual,
         videoVisual: body.videoVisual,
+        videoFirstFrame: body.videoFirstFrame,
         cta: body.cta,
         angle: body.angle,
         funnelStage: body.funnelStage,
@@ -33,29 +34,35 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
 
-    // Load all related data needed to cascade-delete and clean up files
+    // Load just the ids/paths needed to cascade-delete and clean up files.
     const creatives = await prisma.creative.findMany({
       where: { ideaId: id },
-      include: { posts: { include: { snapshots: true } } },
+      select: {
+        id: true,
+        originalFilePath: true,
+        editedFilePath: true,
+        thumbnailPath: true,
+        posts: { select: { id: true } },
+      },
     })
 
-    for (const creative of creatives) {
-      // Delete performance snapshots
-      const postIds = creative.posts.map(p => p.id)
-      if (postIds.length > 0) {
-        await prisma.performanceSnapshot.deleteMany({ where: { postId: { in: postIds } } })
-        await prisma.post.deleteMany({ where: { id: { in: postIds } } })
-      }
+    const creativeIds = creatives.map(c => c.id)
+    const postIds = creatives.flatMap(c => c.posts.map(p => p.id))
+    const filePaths = creatives.flatMap(c => [c.originalFilePath, c.editedFilePath, c.thumbnailPath])
+      .filter((p): p is string => !!p)
 
-      // Delete local video files
-      for (const path of [creative.originalFilePath, creative.editedFilePath, creative.thumbnailPath]) {
-        if (path) await storage.delete(path).catch(() => {})
-      }
+    // Cascade the whole subtree in one batched, atomic transaction
+    // (snapshots → posts → creatives → idea) instead of per-creative round trips.
+    await prisma.$transaction([
+      ...(postIds.length ? [prisma.performanceSnapshot.deleteMany({ where: { postId: { in: postIds } } })] : []),
+      ...(postIds.length ? [prisma.post.deleteMany({ where: { id: { in: postIds } } })] : []),
+      ...(creativeIds.length ? [prisma.creative.deleteMany({ where: { id: { in: creativeIds } } })] : []),
+      prisma.idea.delete({ where: { id } }),
+    ])
 
-      await prisma.creative.delete({ where: { id: creative.id } })
-    }
+    // File cleanup is best-effort and external to the DB - run in parallel.
+    await Promise.all(filePaths.map(path => storage.delete(path).catch(() => {})))
 
-    await prisma.idea.delete({ where: { id } })
     return new Response(null, { status: 204 })
   } catch (err) {
     return Response.json({ error: 'Failed to delete idea', details: String(err) }, { status: 500 })

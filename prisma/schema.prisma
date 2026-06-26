@@ -14,7 +14,17 @@ model Idea {
   hook             String
   imageVisual      String
   videoVisual      String
+  // Still-image prompt for the VIDEO's opening frame (0-3s hook shot). Distinct
+  // from imageVisual (the finished standalone poster): this is a proper first
+  // frame for image2video, not a fully-resolved ad. Nullable so older rows and
+  // the video pipeline can fall back to deriving it from videoVisual.
+  videoFirstFrame  String?
   cta              String
+  // Meta ad copy: primaryText = the body/message above the creative,
+  // headline = the bold line beneath it. Required - every ad needs them; the
+  // manual drawer and generators always supply them (backfilled for old rows).
+  primaryText      String
+  headline         String
   angle            String
   rank             Int       @default(0)
   status           IdeaStatus @default(pending)
@@ -24,7 +34,7 @@ model Idea {
   parentIdeaId     String?
   parent           Idea?     @relation("IdeaChildren", fields: [parentIdeaId], references: [id])
   children         Idea[]    @relation("IdeaChildren")
-  performanceScore Float?
+  performanceScore Float?    // avg cost-per-lead in ₹ (lower is better)
   trendTags        String[]  @default([])
   trendScore       Float?
   trendScoredAt    DateTime?
@@ -71,6 +81,7 @@ model Post {
   postedAt         DateTime?
   externalPostId   String?
   platformMetadata Json?
+  adSchedule       Json?    // null=run always; {days:[0-6 Sun=0], startHour:0-23, endHour:0-23}
 
   snapshots        PerformanceSnapshot[]
 
@@ -89,7 +100,8 @@ model PerformanceSnapshot {
   reach        Int      @default(0)
   clicks       Int      @default(0)
   spend        Decimal  @db.Decimal(10, 2)
-  roas         Decimal? @db.Decimal(10, 4)
+  cpl          Decimal? @db.Decimal(10, 2)
+  leads        Int      @default(0)
   cpm          Decimal  @db.Decimal(10, 4)
   ctr          Decimal  @db.Decimal(10, 6)
   frequency    Decimal  @db.Decimal(10, 4)
@@ -181,6 +193,9 @@ enum PostStatus {
   queued
   posted
   failed
+  // Ad was deleted in Meta Ad Manager after we published it - detected by the
+  // reconcile job (src/lib/jobs/reconcile-posts.ts) and surfaced in the queue.
+  deleted
 }
 
 enum IssueSeverity {
@@ -211,11 +226,19 @@ model HistoricalAd {
   cpl          Float
   leads        Int      @default(0)
   spend        Float
-  isSuccessful Boolean
-  concepts     Json?
-  dateFrom     DateTime
-  dateTo       DateTime
-  source       String   @default("import")
+  impressions  Int?
+  reach        Int?
+  clicks       Int?
+  cpm          Float?
+  ctr          Float?
+  frequency    Float?
+  isSuccessful     Boolean
+  concepts         Json?
+  dateFrom         DateTime
+  dateTo           DateTime
+  source           String   @default("import")
+  hourlyBreakdown  Json?    // [{hour:0-23, impressions, spend, leads, cpl}]
+  weekdayBreakdown Json?    // [{day:0-6 Sun=0, impressions, spend, leads, cpl}]
 
   @@index([isSuccessful])
   @@index([cpl])

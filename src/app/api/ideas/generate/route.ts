@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getIdeaGenerator } from '@/lib/plugins/registry'
 import { assemblePerformanceContext } from '@/lib/performance-context'
+import { deriveFirstFrameVisual } from '@/lib/plugins/prompt-constants'
 import type { FunnelMode } from '@/lib/plugins/interfaces'
 import { NextRequest } from 'next/server'
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
       assemblePerformanceContext(),
       prisma.idea.findMany({ select: { id: true, title: true } as never }),
       prisma.idea.count(),
-      // Trend context is optional — generator works without it
+      // Trend context is optional - generator works without it
       prisma.trendContext.findFirst({ orderBy: { createdAt: 'desc' } }),
     ])
 
@@ -32,10 +33,11 @@ export async function POST(req: NextRequest) {
     })
 
     const topicScores = (latestTrend?.topicScores ?? {}) as Record<string, number>
-    const ideas = []
+    const now = new Date()
 
-    for (let i = 0; i < suggestions.length; i++) {
-      const suggestion = suggestions[i]
+    // Build all rows up front so the writes go out as a single batched insert
+    // (createManyAndReturn) instead of one round-trip per idea.
+    const data = suggestions.map((suggestion, i) => {
       const tagScores = (suggestion.trendTags ?? []).map(
         (tag) => topicScores[tag] ?? topicScores[tag.toLowerCase().replace(/\s+/g, '_')] ?? 0
       )
@@ -47,33 +49,43 @@ export async function POST(req: NextRequest) {
           ? `Idea trend score is low (${Math.round(avgScore * 100)}). May be riding outdated trends.`
           : null
 
-      const idea = await prisma.idea.create({
-        data: {
-          title: suggestion.title,
-          hook: suggestion.hook,
-          imageVisual: suggestion.imageVisual,
-          videoVisual: suggestion.videoVisual,
-          cta: suggestion.cta,
-          angle: suggestion.angle,
-          nudge,
-          sourceType: 'ai_generated',
-          status: 'pending',
-          rank: currentCount + i + 1,
-          trendTags: suggestion.trendTags ?? [],
-          trendScore: avgScore,
-          trendScoredAt: avgScore !== null ? new Date() : null,
-          trendWarning,
-        },
-      })
-      ideas.push(idea)
-    }
+      const validStage = (['TOF', 'MOF', 'BOF'] as const).includes(suggestion.funnelStage as never)
+        ? (suggestion.funnelStage as 'TOF' | 'MOF' | 'BOF')
+        : null
 
-    await prisma.agentAction.create({
-      data: {
-        actionType: 'idea_generated',
-        decisionRationale: `Generated ${ideas.length} ideas. Funnel mode: ${funnelMode}. Trend context: ${latestTrend ? 'yes' : 'skipped'}. Nudge: "${nudge ?? 'none'}". Generator: ${generator.name}.`,
-      },
+      return {
+        title: suggestion.title,
+        hook: suggestion.hook,
+        imageVisual: suggestion.imageVisual,
+        videoVisual: suggestion.videoVisual,
+        videoFirstFrame: suggestion.videoFirstFrame?.trim() || deriveFirstFrameVisual(suggestion.videoVisual),
+        cta: suggestion.cta,
+        // Required fields - fall back to hook/title if the generator omitted them.
+        primaryText: suggestion.primaryText?.trim() || suggestion.hook,
+        headline: suggestion.headline?.trim() || suggestion.title,
+        angle: suggestion.angle,
+        funnelStage: validStage,
+        nudge,
+        sourceType: 'ai_generated' as const,
+        status: 'pending' as const,
+        rank: currentCount + i + 1,
+        trendTags: suggestion.trendTags ?? [],
+        trendScore: avgScore,
+        trendScoredAt: avgScore !== null ? now : null,
+        trendWarning,
+      }
     })
+
+    // One batched insert + the audit log, atomically, in a single round trip.
+    const [ideas] = await prisma.$transaction([
+      prisma.idea.createManyAndReturn({ data }),
+      prisma.agentAction.create({
+        data: {
+          actionType: 'idea_generated',
+          decisionRationale: `Generated ${data.length} ideas. Funnel mode: ${funnelMode}. Trend context: ${latestTrend ? 'yes' : 'skipped'}. Nudge: "${nudge ?? 'none'}". Generator: ${generator.name}.`,
+        },
+      }),
+    ])
 
     return Response.json(ideas, { status: 201 })
   } catch (err) {

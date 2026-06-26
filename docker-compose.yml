@@ -1,0 +1,40 @@
+# Local S3-compatible object storage (MinIO) for development.
+#
+# Start it with:  npm run storage:up   (or: docker compose up -d)
+# Console UI:     http://localhost:9001   (login: minioadmin / minioadmin)
+# S3 API:         http://localhost:9000
+#
+# The app talks to this via the AWS_* env vars in .env.local (STORAGE_TYPE=s3).
+# To go to production, leave the code untouched and point those same env vars at
+# Cloudflare R2 — see .env.example for the exact values.
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: hopcharge-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+  # One-shot init: wait for MinIO, then create the bucket the app expects.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'waiting for minio...'; sleep 1;
+      done &&
+      mc mb --ignore-existing local/hopcharge-creatives &&
+      echo 'bucket hopcharge-creatives ready'
+      "
+
+volumes:
+  minio-data:

@@ -94,9 +94,11 @@ async function main() {
       imageVisual: 'Split composition: left half shows a printed "No Charger Installation" notice pinned to an apartment notice board; right half shows a white Hopcharge van charging a Tata Nexon EV in the same building\'s parking bay — matching warm afternoon light across both halves',
       videoVisual: 'UGC-style: young woman films the building notice board, sighs; cuts to her opening Hopcharge app; cuts to van pulling into her gated colony — security barrier lifting; close on charging cable clicking in; final shot — she walks away to her lobby, unbothered',
       cta: 'Works for any apartment — book now',
+      primaryText: 'Your building said no to a home charger? We charge your EV right in your parking — zero installation. WhatsApp us to book.',
+      headline: 'Works for any apartment',
       angle: 'pain_point', rank: 1, status: 'published', sourceType: 'ai_generated',
       trendTags: ['apartment_ev_charging', 'no_home_charger', 'doorstep_charging'],
-      trendScore: 0.80, trendScoredAt: new Date(), performanceScore: 3.4,
+      trendScore: 0.80, trendScoredAt: new Date(), performanceScore: 88, // avg CPL ₹
     }}),
 
     // 1 — published, top performer
@@ -106,9 +108,11 @@ async function main() {
       imageVisual: 'Overhead aerial still: a white Hopcharge branded van parked in a clean premium apartment colony lot, charging cable running to a silver Tata Nexon EV — soft golden morning light, no people, serene geometry',
       videoVisual: 'Slow aerial push-in: Hopcharge van rolls through a gated colony gate at dawn; owner steps out of lobby, phone in hand; cable connects with a close-up click; time-lapse of charge bar filling from 20% to 100%; owner drives out confidently into Gurugram traffic',
       cta: 'Schedule your first charge',
+      primaryText: 'I never installed a charger — the charger comes to me. Doorstep EV charging across NCR. WhatsApp us to schedule your first charge.',
+      headline: 'The charger comes to you',
       angle: 'convenience', rank: 2, status: 'published', sourceType: 'ai_generated',
       trendTags: ['doorstep_charging', 'tata_ev', 'on_demand_ev'],
-      trendScore: 0.75, trendScoredAt: new Date(), performanceScore: 4.1,
+      trendScore: 0.75, trendScoredAt: new Date(), performanceScore: 58, // avg CPL ₹
     }}),
 
     // 2 — in_production
@@ -118,6 +122,8 @@ async function main() {
       imageVisual: 'High-contrast typographic split: left panel shows a petrol station receipt (₹8 per km, harsh red-orange palette); right panel shows Hopcharge app charge summary screen (₹3.5 per km, clean electric blue) — bold, instantly legible at thumb-scroll speed',
       videoVisual: 'Fast-cut: petrol pump meter spinning rapidly, rupee bills animated flying out; hard cut to Hopcharge app summary showing ₹3.5/km — rupees trickling slowly; cut to real Indian professional driving Tata Tiago EV, smiling; end card with monthly savings figure and Hopcharge branding',
       cta: 'Calculate your monthly savings',
+      primaryText: 'Petrol ₹8/km vs Hopcharge ₹3.5/km — the savings add up fast. WhatsApp us your daily kms and we\'ll work out what you\'d save.',
+      headline: 'Charge for ₹3.5/km',
       angle: 'curiosity_gap', rank: 3, status: 'in_production', sourceType: 'ai_generated',
       trendTags: ['petrol_vs_ev', 'ev_cost_savings', 'tata_ev'],
       trendScore: 0.74, trendScoredAt: new Date(),
@@ -130,6 +136,8 @@ async function main() {
       imageVisual: 'Cinematic landscape: Tata Nexon EV parked on a mountain highway with Himachal Pradesh peaks behind, Hopcharge branded cable connected to a portable charging unit — golden hour light, aspirational travel energy',
       videoVisual: 'Travel montage: couple loads Tata Nexon EV in Delhi colony parking; highway driving time-lapse; Hopcharge van meets them at a pre-booked stop in Chandigarh; mountain scenery; final arrival in Manali — 100% battery shown on phone',
       cta: 'Plan your electric road trip',
+      primaryText: 'We drove Delhi → Manali fully electric and never hunted for a charger. Curious how we planned charging? WhatsApp us.',
+      headline: 'Delhi to Manali, all electric',
       angle: 'social_proof', rank: 4, status: 'selected', sourceType: 'ai_generated',
       trendTags: ['ev_road_trip', 'delhi_ncr_ev'],
       trendScore: 0.39, trendScoredAt: new Date(),
@@ -143,6 +151,8 @@ async function main() {
       imageVisual: 'Night scene: stranded Tata Punch EV on a quiet Gurugram road, hazard lights blinking orange — Hopcharge van headlights approaching in the dark background, creating dramatic blue-orange contrast',
       videoVisual: 'Handheld UGC: woman films her dead EV on a dark street; opens Hopcharge app, taps RescueCharge, confirms booking; 40-minute time card; van arrives — wide shot to close on cable connection; she drives away safely; end card "RescueCharge — available 24/7"',
       cta: 'Add RescueCharge to your plan',
+      primaryText: 'Dead EV battery at 11 PM in Gurugram — RescueCharge reached her in 40 minutes. Want that backup? WhatsApp us to add it to your plan.',
+      headline: 'Stranded? We come to you',
       angle: 'problem_solution', rank: 5, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['rescuecharge', 'ev_range_anxiety', 'on_demand_ev'],
       trendScore: 0.66, trendScoredAt: new Date(),
@@ -155,6 +165,8 @@ async function main() {
       imageVisual: 'Brand partnership shot: a Tata Curvv EV and the white Hopcharge van parked side by side in a spotless Tata dealership forecourt — golden hour light, premium symmetrical composition, no clutter',
       videoVisual: 'Cinematic brand film: Tata Curvv EV drives into frame and parks; Hopcharge van pulls alongside; charging cable connects; time-lapse of charge; both vehicles drive away in opposite directions; end title — "Tata.ev × Hopcharge: Official Charging Partner" with app download CTA',
       cta: 'Included with select Tata EV plans',
+      primaryText: 'Got a Tata EV? Hopcharge is the official doorstep charging partner — no home charger needed. WhatsApp us to set up your plan.',
+      headline: 'Official Tata EV partner',
       angle: 'social_proof', rank: 6, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['tata_ev', 'tata_nexon_ev', 'doorstep_charging'],
       trendScore: 0.78, trendScoredAt: new Date(),
@@ -167,6 +179,8 @@ async function main() {
       imageVisual: 'Talking-head close-up: young professional in modern Noida apartment, direct to camera, slightly smiling — Hopcharge app visible on phone in hand, apartment building visible through window behind them',
       videoVisual: 'Vertical talking-head Reel: creator addresses myth directly — "You can\'t charge an EV if you rent"; debunks it with Hopcharge booking; cut to van arriving at rented apartment complex; back to creator — "I own a Tata Tiago EV and I rent. Hopcharge charges it for me."',
       cta: 'EV ownership just got easier',
+      primaryText: '"You can\'t own an EV if you rent." Not true — we charge your car at your building, zero installation. WhatsApp us to see how.',
+      headline: 'Rent? You can still go EV',
       angle: 'education', rank: 7, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['apartment_ev_charging', 'tata_ev', 'on_demand_ev'],
       trendScore: 0.79, trendScoredAt: new Date(),
@@ -179,6 +193,8 @@ async function main() {
       imageVisual: 'Phone screen in dim bedroom: Hopcharge app showing tomorrow\'s confirmed booking — "7:00 AM, 80% → 100%, ₹420" — Tata Nexon EV key fob on the bedside table, soft warm lamp light',
       videoVisual: 'Evening routine montage: person on sofa opens Hopcharge, books a slot for 7 AM with 3 taps; cut to morning — van already in parking, cable connected; owner walks out with coffee, disconnects, drives to Cyber City in Gurugram; commute looks effortless',
       cta: 'Book up to 48 hours ahead',
+      primaryText: 'Book tonight, wake up to a full charge. We top up your EV where it\'s parked, up to 48 hrs ahead. WhatsApp us to book a slot.',
+      headline: 'Wake up to 100%',
       angle: 'lifestyle', rank: 8, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['ev_subscription', 'doorstep_charging', 'apartment_ev_charging'],
       trendScore: 0.74, trendScoredAt: new Date(),
@@ -191,6 +207,8 @@ async function main() {
       imageVisual: 'Lifestyle flat-lay on a minimal desk: Gurugram glass towers visible through a window, Tata Nexon EV key, phone with Hopcharge app confirmation open, black coffee — aspirational urban professional morning aesthetic, clean daylight',
       videoVisual: 'Day-in-the-life vlog format: 6:45 AM alarm — van quietly charging in parking while owner has breakfast; 8 AM commute through Cyber Hub; 5 PM check — next morning\'s booking already confirmed in app; end card "Zero charging stress. Just drive." over Gurugram skyline',
       cta: 'Start your Hopcharge subscription',
+      primaryText: 'No charging station, no stress — just a charged car waiting every Gurugram morning. WhatsApp us to start your Hopcharge plan.',
+      headline: 'EV mornings, zero stress',
       angle: 'lifestyle', rank: 9, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['delhi_ncr_ev', 'apartment_ev_charging', 'tata_ev'],
       trendScore: 0.78, trendScoredAt: new Date(),
@@ -203,6 +221,8 @@ async function main() {
       imageVisual: 'Rainy street scene: Tata Punch EV parked outside an apartment building, rain streaking the windshield — Hopcharge waterproof cable visible, puddles reflecting city lights, moody blue-grey palette',
       videoVisual: 'Educational talking-head: EV owner in a rain-streaked apartment window addresses monsoon charging myths; cuts to Hopcharge van operating normally in light rain; back to creator — "The van is waterproof. The charge works. Stop worrying."',
       cta: 'Rain or shine, we charge your EV',
+      primaryText: 'Worried about charging your EV in the rain? Our doorstep charging works rain or shine — fully weatherproof. Questions? WhatsApp us.',
+      headline: 'EV charging in the monsoon',
       angle: 'education', rank: 10, status: 'archived', sourceType: 'human_added',
       trendTags: ['monsoon_ev', 'apartment_ev_charging'],
       trendScore: 0.31, trendScoredAt: new Date(),
@@ -216,6 +236,8 @@ async function main() {
       imageVisual: 'Clean product shot: three Hopcharge plan cards (Experience / Success 3.3 / Success 7.2) laid out on a white surface with subtle electric-blue accent lighting — minimal, professional, easily scannable',
       videoVisual: 'Subscription explainer: plan cards animate in one by one with feature callouts (sessions, RescueCharge, months); quick cuts to real footage of van arriving, cable connecting, app confirming; end with CTA overlay and app store badges',
       cta: 'See plans starting at ₹50,000/year',
+      primaryText: 'Six months in and I haven\'t thought about charging once. Plans from ₹50,000/year, RescueCharge included. WhatsApp us to subscribe.',
+      headline: 'Plans from ₹50,000/year',
       angle: 'convenience', rank: 11, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['ev_subscription', 'doorstep_charging', 'rescuecharge'],
       trendScore: 0.68, trendScoredAt: new Date(),
@@ -228,6 +250,8 @@ async function main() {
       imageVisual: 'Discovery moment: smiling Indian couple standing beside a brand-new Tata Punch EV at dealership, both looking at phone — Hopcharge app open showing first booking — confetti/celebration energy, warm dealership lighting',
       videoVisual: 'New-owner journey: unboxing energy — couple at Tata dealership taking delivery; driving home excited; realisation shot — apartment, no charger point; one partner searches "EV charging apartment Delhi"; finds Hopcharge; first booking placed; van arrives next morning — they high-five',
       cta: 'The charging solution for new Tata EV owners',
+      primaryText: 'Just picked up your Tata EV? Skip the home-charger hassle — we charge it at your door. WhatsApp us to set up your first charge.',
+      headline: 'New Tata EV? Start here',
       angle: 'discovery', rank: 12, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['tata_ev', 'apartment_ev_charging', 'on_demand_ev'],
       trendScore: 0.80, trendScoredAt: new Date(),
@@ -240,6 +264,8 @@ async function main() {
       imageVisual: 'Modern corporate parking: white Hopcharge van next to a Tata Curvv EV in a clean multi-level Gurugram office parking structure — "Office Charging" text visible on van, professional daytime lighting',
       videoVisual: 'Office day montage: professional arrives at work, parks Tata Nexon EV; opens Hopcharge app, books "Office Parking, 10 AM–2 PM"; van arrives in the parking structure; cable runs to car; professional works at desk uninterrupted; walks back to fully charged car at 2 PM',
       cta: 'Home, office, anywhere in NCR',
+      primaryText: 'Hopcharge doesn\'t just come home — we charge at your office parking too, anywhere in NCR. WhatsApp us to book your spot.',
+      headline: 'Home, office, anywhere in NCR',
       angle: 'convenience', rank: 13, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['doorstep_charging', 'delhi_ncr_ev', 'on_demand_ev'],
       trendScore: 0.73, trendScoredAt: new Date(),
@@ -252,6 +278,8 @@ async function main() {
       imageVisual: 'Aspirational wide shot: clean elevated Delhi highway at golden hour, Tata EV in foreground moving smoothly, smoggy skyline transitioning to clear sky in a split — "Your charge. Your impact." typography overlay',
       videoVisual: 'Values montage: data animation of CO₂ saved per Hopcharge session; Delhi air quality improving; families in parks; Tata EV driving on empty morning roads; Hopcharge van in colony parking; end title "Join 10,000+ EV owners charging cleaner in NCR"',
       cta: 'Charge greener. Drive further.',
+      primaryText: 'Every Hopcharge session is one less petrol car on Delhi\'s roads. Want to charge cleaner and drive further? WhatsApp us to learn more.',
+      headline: 'Charge greener, drive further',
       angle: 'values', rank: 14, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['delhi_ncr_ev', 'tata_ev', 'on_demand_ev'],
       trendScore: 0.74, trendScoredAt: new Date(),
@@ -264,6 +292,8 @@ async function main() {
       imageVisual: 'Contrast shot: left side shows a busy public EV charging station with three cars queued, frustrated drivers visible; right side shows a Hopcharge van pulling directly into a private apartment parking bay — same frame, stark contrast',
       videoVisual: 'Documentary-style: handheld footage of packed public charger queue in Gurugram; timer ticking — 45 minutes; hard cut to Hopcharge app booking confirmed; van arrives at user\'s apartment in 30 minutes; cable in, charging starts immediately; "No queue. No wait. Just charge."',
       cta: 'Book your private charger now',
+      primaryText: 'Public chargers in Gurugram mean a 45-minute wait. With Hopcharge there\'s zero queue — we come to you. WhatsApp us to book now.',
+      headline: 'Skip the 45-min queue',
       angle: 'problem_solution', rank: 15, status: 'pending', sourceType: 'ai_generated',
       trendTags: ['apartment_ev_charging', 'doorstep_charging', 'fast_charging_india'],
       trendScore: 0.77, trendScoredAt: new Date(),
@@ -313,8 +343,8 @@ async function main() {
     date.setHours(0, 0, 0, 0)
     const dayProgress = (29 - d) / 29
 
-    // post1 (Apartment Wall): good performer, slight fatigue at end
-    const p1Roas = 3.2 + Math.sin(dayProgress * Math.PI) * 0.8 + (Math.random() - 0.5) * 0.3
+    // post1 (Apartment Wall): good performer, CPL creeps up as it fatigues
+    const p1Cpl = Math.max(40, 70 + dayProgress * 55 + (Math.random() - 0.5) * 10) // ~₹70 → ~₹125
     const p1Freq = 1.2 + dayProgress * 2.5
     const p1Impressions = Math.floor(8000 + Math.random() * 3000)
     const p1Spend = 120 + Math.random() * 40
@@ -324,7 +354,8 @@ async function main() {
         impressions: p1Impressions, reach: Math.floor(p1Impressions * 0.82),
         clicks: Math.floor(p1Impressions * 0.025),
         spend: new Decimal(p1Spend.toFixed(2)),
-        roas: new Decimal(Math.max(0.5, p1Roas).toFixed(4)),
+        cpl: new Decimal(p1Cpl.toFixed(2)),
+        leads: Math.max(1, Math.round(p1Spend / p1Cpl)),
         cpm: new Decimal((p1Spend / p1Impressions * 1000).toFixed(4)),
         ctr: new Decimal((Math.floor(p1Impressions * 0.025) / p1Impressions).toFixed(6)),
         frequency: new Decimal(p1Freq.toFixed(4)),
@@ -332,8 +363,8 @@ async function main() {
       },
     })
 
-    // post2 (Van at Your Doorstep): top performer, consistent ROAS ~4.5
-    const p2Roas = 4.2 + Math.random() * 1.0 - (dayProgress > 0.8 ? dayProgress * 0.5 : 0)
+    // post2 (Van at Your Doorstep): top performer, consistently low CPL ~₹55
+    const p2Cpl = 55 + Math.random() * 10 + (dayProgress > 0.8 ? dayProgress * 12 : 0)
     const p2Impressions = Math.floor(12000 + Math.random() * 5000)
     const p2Spend = 200 + Math.random() * 80
     await prisma.performanceSnapshot.create({
@@ -342,7 +373,8 @@ async function main() {
         impressions: p2Impressions, reach: Math.floor(p2Impressions * 0.88),
         clicks: Math.floor(p2Impressions * 0.035),
         spend: new Decimal(p2Spend.toFixed(2)),
-        roas: new Decimal(Math.max(1.0, p2Roas).toFixed(4)),
+        cpl: new Decimal(p2Cpl.toFixed(2)),
+        leads: Math.max(1, Math.round(p2Spend / p2Cpl)),
         cpm: new Decimal((p2Spend / p2Impressions * 1000).toFixed(4)),
         ctr: new Decimal((Math.floor(p2Impressions * 0.035) / p2Impressions).toFixed(6)),
         frequency: new Decimal((1.1 + dayProgress * 1.2).toFixed(4)),
@@ -356,8 +388,8 @@ async function main() {
   // --- Pipeline Issues ---
   await prisma.pipelineIssue.createMany({
     data: [
-      { severity: 'critical', stage: 'analytics', description: `Post ${post1.id} has had ROAS below 1.0 for 3 consecutive days — creative fatiguing`, relatedEntityId: post1.id, isResolved: false },
-      { severity: 'warning', stage: 'analytics', description: `Creative fatigue detected on post ${post1.id}: frequency 3.7, ROAS dropped 28% from peak`, relatedEntityId: post1.id, isResolved: false },
+      { severity: 'critical', stage: 'analytics', description: `Post ${post1.id} has had CPL above ₹100 for 3 consecutive days — creative fatiguing`, relatedEntityId: post1.id, isResolved: false },
+      { severity: 'warning', stage: 'analytics', description: `Creative fatigue detected on post ${post1.id}: frequency 3.7, CPL rose 28% above best`, relatedEntityId: post1.id, isResolved: false },
       { severity: 'warning', stage: 'production', description: `Creative ${creative5.id} has been generating for over 30 minutes`, relatedEntityId: creative5.id, isResolved: false },
       { severity: 'info', stage: 'idea_generation', description: 'Feedback loop generated 5 new ideas based on performance data — apartment_ev_charging and doorstep_charging angles prioritised', isResolved: true, resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
       { severity: 'info', stage: 'trend_analysis', description: 'Trend context refreshed. 2 ideas demoted due to stale trends (ev_road_trip, monsoon_ev)', isResolved: true, resolvedAt: new Date() },
@@ -377,7 +409,7 @@ async function main() {
       { createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), actionType: 'creative_selected', decisionRationale: 'Creative for "Van at Your Doorstep" approved. Human edited version selected. Strong match with rising doorstep_charging and tata_ev trends. Cinematic style approved for this angle.', relatedEntityId: creative2.id },
       { createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), actionType: 'post_published', decisionRationale: `Post ${post2.id} published to meta via stub adapter. External ID: act_123456789_post_002`, relatedEntityId: post2.id },
       { createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000), actionType: 'idea_generated', decisionRationale: 'Manual generation triggered with nudge: "focus on new Tata EV buyers in NCR apartments". 5 ideas created referencing tata_ev (79) and apartment_ev_charging (82) trends.', humanOverridden: false },
-      { createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), actionType: 'post_paused', decisionRationale: `Post ${post1.id} paused due to critical fatigue signal: frequency 3.7, ROAS dropped 35% from peak 3.8.`, relatedEntityId: post1.id, humanOverridden: true, humanOverrideReason: 'Decided to reduce budget rather than pause entirely — still driving some leads', outcome: 'pending' },
+      { createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), actionType: 'post_paused', decisionRationale: `Post ${post1.id} paused due to critical fatigue signal: frequency 3.7, CPL rose 35% above best (₹70 → ₹95).`, relatedEntityId: post1.id, humanOverridden: true, humanOverrideReason: 'Decided to reduce budget rather than pause entirely — still driving some leads', outcome: 'pending' },
       { createdAt: new Date(), actionType: 'brief_written', decisionRationale: 'Creative brief written for "₹3.5 Per Km — The Real Math" — UGC style, captions required, include real monthly savings figure, show Hopcharge app UI in second half.', relatedEntityId: ideas[2].id, outcome: 'pending' },
     ],
   })

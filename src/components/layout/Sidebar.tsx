@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { DarkModeToggle } from './DarkModeToggle'
 
 function IdeasIcon() {
   return (
@@ -81,14 +81,16 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col h-screen sticky top-0 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800">
-      <div className="px-5 py-4 border-b border-gray-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            H
-          </div>
-          <span className="font-semibold text-gray-900 dark:text-white text-sm">Ad Engine</span>
-        </div>
+    <aside className="w-56 shrink-0 flex flex-col h-screen sticky top-0 bg-white border-r border-brand-border">
+      <div className="px-5 py-4 border-b border-brand-border flex justify-center">
+        <Image
+          src="/hopcharge-logo.svg"
+          alt="Hopcharge"
+          width={120}
+          height={19}
+          priority
+          className="h-5 w-auto"
+        />
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5">
@@ -98,10 +100,10 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                 active
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800'
+                  ? 'bg-brand text-white font-medium shadow-sm'
+                  : 'text-brand-muted hover:text-brand-dark hover:bg-brand-surface'
               }`}
             >
               <Icon />
@@ -111,10 +113,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-gray-200 dark:border-zinc-800 flex items-center justify-between">
-        <span className="text-xs text-gray-400 dark:text-zinc-500">Hopcharge</span>
-        <DarkModeToggle />
-      </div>
     </aside>
   )
 }

@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import type { ImageGeneratorPlugin } from '../interfaces'
 import type { Idea } from '@prisma/client'
 import { writeJob, readJob } from './jobs'
+import { buildImagePrompt } from '../prompt-constants'
 
 const SESSION_FILE = path.join(process.cwd(), '.browser-session-flyne.json')
 const CONFIG_FILE  = path.join(process.cwd(), '.browser-config-flyne.json')
@@ -21,16 +22,7 @@ export class FlyneBrowserGenerator implements ImageGeneratorPlugin {
   name = 'browser-flyne'
 
   private buildPrompt(idea: Idea): string {
-    return [
-      idea.imageVisual,
-      'Hopcharge ad — India\'s on-demand doorstep EV charging service: a branded white-and-blue mobile charging van comes to the customer.',
-      'Setting: modern Delhi-NCR — upscale apartment complex, gated residential colony, or premium parking bay.',
-      'Subject: confident Indian urban professional, 25–40 years old, relaxed beside their Tata EV.',
-      'Brand aesthetic: clean, aspirational, tech-forward — white, electric blue, crisp.',
-      'High-end advertising photography, cinematic lighting, sharp focus.',
-      `Emotional tone: ${idea.angle.replace(/_/g, ' ')}.`,
-      'Vertical 9:16, no text overlay, no watermark.',
-    ].join(' ')
+    return buildImagePrompt(idea.imageVisual, { brief: true, angle: idea.angle })
   }
 
   async generate({ prompt }: { prompt: string; referenceAssets?: string[] }): Promise<{ fileUrl: string; fileUrls?: string[] }> {
@@ -62,7 +54,7 @@ export class FlyneBrowserGenerator implements ImageGeneratorPlugin {
     if (!child.pid) {
       throw new Error('Failed to spawn Flyne automation process')
     }
-    console.log(`[flyne] Job ${jobId} started — PID ${child.pid} — log: ${logFile}`)
+    console.log(`[flyne] Job ${jobId} started - PID ${child.pid} - log: ${logFile}`)
     child.unref()
 
     // Poll until complete (max 5 minutes)

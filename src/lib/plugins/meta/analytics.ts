@@ -30,7 +30,13 @@ export class MetaAnalytics implements AnalyticsPlugin {
     const spend = parseFloat(d.spend ?? '0')
     const impressions = parseInt(d.impressions ?? '0')
     const clicks = parseInt(d.clicks ?? '0')
-    const revenue = d.actions?.find((a: { action_type: string }) => a.action_type === 'purchase')?.value ?? 0
+
+    // Hopcharge's conversion is a WhatsApp/Messenger lead, not a purchase, so we
+    // track cost-per-lead (CPL) and lead count rather than ROAS.
+    const leadAction = process.env.META_LEAD_ACTION_TYPE ?? 'onsite_conversion.messaging_conversation_started_7d'
+    const cplEntry = d.cost_per_action_type?.find((a: { action_type: string }) => a.action_type === leadAction)
+    const leadsEntry = d.actions?.find((a: { action_type: string }) => a.action_type === leadAction)
+    const leads = leadsEntry ? parseInt(leadsEntry.value) : 0
 
     return {
       snapshotDate: dateRange.from,
@@ -38,7 +44,8 @@ export class MetaAnalytics implements AnalyticsPlugin {
       reach: parseInt(d.reach ?? '0'),
       clicks,
       spend: new Decimal(spend.toFixed(2)),
-      roas: spend > 0 ? new Decimal((parseFloat(revenue) / spend).toFixed(4)) : null,
+      cpl: cplEntry ? new Decimal(parseFloat(cplEntry.value).toFixed(2)) : null,
+      leads,
       cpm: new Decimal(parseFloat(d.cpm ?? '0').toFixed(4)),
       ctr: new Decimal(parseFloat(d.ctr ?? '0').toFixed(6)),
       frequency: new Decimal(parseFloat(d.frequency ?? '0').toFixed(4)),

@@ -24,7 +24,7 @@ import { MetaPublisher } from './meta/publisher'
 import { MetaAnalytics } from './meta/analytics'
 import { MetaAdLibraryScraper } from './meta/ad-library'
 import { GoogleTrendsFetcher } from './google-trends/fetcher'
-import { HiggsfieldGenerator } from './higgsfield'
+import { HiggsfieldGenerator, HiggsfieldImageGenerator } from './higgsfield'
 import { KlingGenerator } from './kling'
 import { RunwayGenerator } from './runway'
 import { ReplicateFluxGenerator } from './replicate'
@@ -59,6 +59,7 @@ export function getVideoGenerator(): VideoGeneratorPlugin {
 
 export function getImageGenerator(): ImageGeneratorPlugin {
   switch (env('IMAGE_GENERATOR')) {
+    case 'higgsfield':   return new HiggsfieldImageGenerator()
     case 'replicate':    return new ReplicateFluxGenerator()
     case 'browser-flux':  return new FluxBrowserGenerator()
     case 'browser-flyne': return new FlyneBrowserGenerator()

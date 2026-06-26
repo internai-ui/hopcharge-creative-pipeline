@@ -30,8 +30,9 @@ export async function GET(req: NextRequest) {
     const totalSpend = snapshots.reduce((s, snap) => s + Number(snap.spend), 0)
     const totalImpressions = snapshots.reduce((s, snap) => s + snap.impressions, 0)
     const totalClicks = snapshots.reduce((s, snap) => s + snap.clicks, 0)
-    const avgRoas = snapshots.length > 0
-      ? snapshots.reduce((s, snap) => s + Number(snap.roas ?? 0), 0) / snapshots.length
+    const cplValues = snapshots.map((snap) => (snap.cpl != null ? Number(snap.cpl) : null)).filter((v): v is number => v != null && v > 0)
+    const avgCpl = cplValues.length > 0
+      ? cplValues.reduce((s, v) => s + v, 0) / cplValues.length
       : 0
     const avgCpm = snapshots.length > 0
       ? snapshots.reduce((s, snap) => s + Number(snap.cpm), 0) / snapshots.length
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       : 0
 
     return Response.json({
-      summary: { totalSpend, totalImpressions, totalClicks, avgRoas, avgCpm, avgCtr },
+      summary: { totalSpend, totalImpressions, totalClicks, avgCpl, avgCpm, avgCtr },
       snapshots,
     })
   } catch (err) {

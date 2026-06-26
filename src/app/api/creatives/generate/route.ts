@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { storage } from '@/lib/storage'
-import { getVideoGenerator } from '@/lib/plugins/registry'
+import { getVideoGenerator, getImageGenerator } from '@/lib/plugins/registry'
+import { buildImagePrompt, deriveFirstFrameVisual } from '@/lib/plugins/prompt-constants'
 import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -34,8 +35,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Credit safety: don't submit a second video job for an idea that already has a
+    // live one - a duplicate submission burns generation credits for nothing.
+    if (!regenerate) {
+      const active = await prisma.creative.findFirst({
+        where: { ideaId, mediaType: 'video', status: { in: ['generating', 'ready_for_review', 'approved', 'published'] } },
+      })
+      if (active) return Response.json(active, { status: 200 })
+    }
+
     const generator = getVideoGenerator()
-    const { jobId } = await generator.submitJob({ idea })
+
+    // Image2video generators (Higgsfield) need an OPENING FRAME, not the finished
+    // image ad. Render a dedicated first frame from the idea's videoFirstFrame prompt
+    // (Soul-locked to Sara via the image generator), so each video is dynamically
+    // generated yet character-consistent. Text2video generators ignore this.
+    let referenceAssets: string[] | undefined
+    if (generator.name === 'higgsfield') {
+      const framePrompt = buildImagePrompt(
+        idea.videoFirstFrame?.trim() || deriveFirstFrameVisual(idea.videoVisual),
+        { angle: idea.angle }
+      )
+      const frame = await getImageGenerator().generate({ prompt: framePrompt })
+      if (frame.fileUrl) referenceAssets = [frame.fileUrl]
+    }
+
+    const { jobId } = await generator.submitJob({ idea, referenceAssets })
 
     const creative = await prisma.creative.create({
       data: {

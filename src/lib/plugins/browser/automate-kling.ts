@@ -1,5 +1,5 @@
 /**
- * Kling AI web automation — runs as a child process.
+ * Kling AI web automation - runs as a child process.
  * Reads JOB_ID and PROMPT from env, opens kling.ai with the saved session,
  * navigates to the video creation page, submits the prompt, waits for the
  * video to appear, downloads it, and writes the result to the job file.
@@ -93,7 +93,7 @@ async function run() {
 
     // ── Step 1: Navigate to the saved creation URL ──
     // If Kling opens creation in a new tab during normal use, direct navigation
-    // to the saved URL should still work — it's just a URL.
+    // to the saved URL should still work - it's just a URL.
     await page.goto(config.creationUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await page.waitForTimeout(3000)
     await shot(page, '01-creation-page')
@@ -106,7 +106,7 @@ async function run() {
 
     // If the page redirected away from creation URL, try going via dashboard first
     if (!page.url().includes(config.creationUrl.replace('https://kling.ai', ''))) {
-      console.log('[kling] Direct URL redirect detected — navigating via dashboard')
+      console.log('[kling] Direct URL redirect detected - navigating via dashboard')
       await page.goto('https://kling.ai/app', { waitUntil: 'domcontentloaded', timeout: 20000 })
       await page.waitForTimeout(2000)
       // Open the creation URL in the same tab
@@ -184,7 +184,7 @@ async function run() {
       })
       if (dlHref) { videoUrl = dlHref; break }
 
-      // Priority 4: Blob URL — we can download these from inside the browser
+      // Priority 4: Blob URL - we can download these from inside the browser
       const blobUrl = await page.evaluate(() => {
         const videos = Array.from(document.querySelectorAll('video'))
         for (const v of videos) {
@@ -196,7 +196,7 @@ async function run() {
       })
       if (blobUrl) {
         videoUrl = blobUrl
-        console.log('[kling] Found blob URL — will download via browser context')
+        console.log('[kling] Found blob URL - will download via browser context')
         break
       }
     }
@@ -210,7 +210,7 @@ async function run() {
     const destPath = path.join(VIDEO_DIR, `${JOB_ID}.mp4`)
 
     if (videoUrl.startsWith('blob:')) {
-      // Download blob from inside the browser — Node's http module can't handle blob: URLs
+      // Download blob from inside the browser - Node's http module can't handle blob: URLs
       console.log('[kling] Downloading blob URL via browser evaluate...')
       const base64 = await page.evaluate(async (url) => {
         const response = await fetch(url)
