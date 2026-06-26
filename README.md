@@ -24,9 +24,9 @@ An internal automated marketing pipeline for Hopcharge. It orchestrates the full
 ## Running locally
 
 ### Prerequisites
-- Node.js 20+
-- PostgreSQL 14+ (running locally or remote)
-- Docker (for local MinIO object storage)
+- **Node.js 20+** and npm
+- **PostgreSQL 14+** running and reachable (local or remote). Prisma creates the database named in `DATABASE_URL` if it doesn't exist — you only need the server running and credentials that can create databases.
+- **Docker** (only for local MinIO object storage; skippable — see step 3).
 
 ### Setup
 
@@ -34,13 +34,18 @@ An internal automated marketing pipeline for Hopcharge. It orchestrates the full
 # 1. Install dependencies
 npm install
 
-# 2. Copy env file and fill in at minimum DATABASE_URL
+# 2. Create your env file. At minimum set DATABASE_URL to a reachable Postgres.
+#    The Prisma CLI reads .env.local via prisma.config.ts, so this one file
+#    covers both the app and the db:* scripts.
 cp .env.example .env.local
 
-# 3. Start local object storage (MinIO) — creates the creatives bucket
+# 3. Start local object storage (MinIO) — creates the creatives bucket.
+#    Needed at runtime to store/serve generated media (the default
+#    STORAGE_TYPE=s3). Not required for db:seed.
+#    To skip Docker entirely, set STORAGE_TYPE=local in .env.local instead.
 npm run storage:up
 
-# 4. Push schema to your database
+# 4. Create tables and generate the Prisma client (db:push does both)
 npm run db:push
 
 # 5. Seed with demo data (ideas, creatives, 30 days of perf snapshots, etc.)
@@ -50,9 +55,11 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/ideas`. If `INTERNAL_PASSWORD` is set in `.env.local`, you'll be prompted to log in first.
+Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/ideas`. There is no authentication; the app is open on whatever host/port it binds to.
 
 > **All plugin slots default to `stub` mode** — the app is fully functional with no external API keys.
+>
+> **Background jobs start automatically** when the dev/prod server boots (`src/instrumentation.ts` → `registerJobs()`), so `DATABASE_URL` must point at a reachable Postgres at startup. pg-boss creates its own queue tables on first run.
 
 ### MinIO (local object storage)
 
@@ -74,6 +81,8 @@ To go to production, leave the code untouched and point the `AWS_*` env vars at 
 | `npm run classify-funnel` | Backfill `funnelStage` on existing ideas |
 | `npm run backfill-ad-copy` | Backfill `primaryText` / `headline` ad copy |
 | `npm run browser:setup:<vendor>` | Launch a real browser to capture a login session for a browser-automation generator (`kling`, `veo`, `runway`, `flux`, `flyne`) |
+
+> The `browser:setup:*` scripts and `browser-*` generators use Playwright's Chromium, which is **not** installed by `npm install`. Run `npx playwright install chromium` once before using them. (Not needed for default `stub` mode.)
 
 ---
 
