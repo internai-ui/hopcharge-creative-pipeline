@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# browser automation sessions/configs - contain live login cookies, never commit
+.browser-session*
+.browser-config*
+
 # vercel
 .vercel
 
