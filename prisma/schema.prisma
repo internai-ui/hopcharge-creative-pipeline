@@ -214,6 +214,20 @@ enum PipelineStage {
   feedback_loop
 }
 
+// Runtime control panel for background job automation (singleton row, id="singleton").
+// masterEnabled is the global on/off; jobs is a { [jobName]: boolean } map of which
+// individual jobs are allowed to run when the master switch is on. Persisted so the
+// choice survives restarts and is re-applied by src/instrumentation.ts at boot.
+model AutomationConfig {
+  id            String   @id @default("singleton")
+  masterEnabled Boolean  @default(false)
+  jobs          Json
+  // Per-job cron overrides keyed by job name. Missing entries fall back to the
+  // env/default cron baked into JOB_DEFS.
+  schedules     Json?
+  updatedAt     DateTime @updatedAt
+}
+
 model HistoricalAd {
   id           String   @id @default(uuid())
   importedAt   DateTime @default(now())

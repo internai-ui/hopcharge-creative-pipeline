@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import {
   LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
@@ -754,9 +754,8 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
                     : null
 
                   return (
-                    <>
+                    <Fragment key={ad.id}>
                       <tr
-                        key={ad.id}
                         onClick={() => setExpandedImportedAdId(isExpanded ? null : ad.id)}
                         className={`border-b border-brand-border cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/40' : 'hover:bg-brand-bg'}`}
                       >
@@ -778,7 +777,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${ad.id}-timing`} className="border-b border-brand-border bg-brand-bg/50">
+                        <tr className="border-b border-brand-border bg-brand-bg/50">
                           <td colSpan={8} className="px-4 py-4">
                             {hourlyForAd ? (
                               <div className="grid grid-cols-2 gap-6 animate-reveal">
@@ -817,7 +816,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   )
                 })}
               </tbody>
