@@ -132,7 +132,7 @@ export function EvaluationClient({ initialIssues, initialActions, totalDecisions
           )}
         </div>
 
-        {/* Agent actions — preview + show more */}
+        {/* Agent actions - preview + show more */}
         <div className="bg-white border border-brand-border rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-brand-border flex items-center justify-between">
             <h3 className="font-medium text-brand-dark">Agent Actions</h3>
@@ -202,7 +202,7 @@ export function EvaluationClient({ initialIssues, initialActions, totalDecisions
         </div>
       </section>
 
-      {/* ── Pipeline Issues — collapsed at bottom ── */}
+      {/* ── Pipeline Issues - collapsed at bottom ── */}
       <section className="bg-white border border-brand-border rounded-xl overflow-hidden shadow-sm">
         <button
           onClick={() => setShowIssues(v => !v)}

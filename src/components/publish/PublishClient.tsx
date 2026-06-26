@@ -367,7 +367,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                     {(post.platformMetadata as { draft?: boolean } | null)?.draft && post.status === 'posted' && (
                       <span
                         className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200"
-                        title="Saved as a paused draft on Meta (META_DRAFT_MODE) — not delivering"
+                        title="Saved as a paused draft on Meta (META_DRAFT_MODE) - not delivering"
                       >
                         Draft
                       </span>

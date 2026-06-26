@@ -4,7 +4,7 @@
   --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
 
-  /* Hopcharge brand palette — exact values from hopcharge.com stylesheet */
+  /* Hopcharge brand palette - exact values from hopcharge.com stylesheet */
   --color-brand:         #222e53;
   --color-brand-dark:    #18214d;
   --color-brand-darker:  #0f1a34;
@@ -30,7 +30,7 @@ body {
   background-color: #f4f7fc;
 }
 
-/* ── Hopcharge button base — matches website: border-radius 2px, 0.2s transition ── */
+/* ── Hopcharge button base - matches website: border-radius 2px, 0.2s transition ── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -71,7 +71,7 @@ body {
 .btn-secondary:active { transform: scale(0.97); }
 .btn-secondary:disabled { opacity: 0.5; cursor: default; }
 
-/* ── Card — matches website card style ── */
+/* ── Card - matches website card style ── */
 .card {
   background-color: #fff;
   border-radius: 8px;
@@ -84,7 +84,7 @@ body {
   border: 1px solid transparent;
 }
 
-/* ── Form inputs — matches website input style ── */
+/* ── Form inputs - matches website input style ── */
 .input {
   font-size: 14px;
   font-weight: 400;
@@ -102,7 +102,7 @@ body {
 .input:focus, .input:hover { border-color: #3e4462; }
 .input::placeholder { color: #3e4462; font-weight: 300; }
 
-/* ── Select — same as input ── */
+/* ── Select - same as input ── */
 select.input { appearance: none; cursor: pointer; }
 
 /* ── Chart theming ── */

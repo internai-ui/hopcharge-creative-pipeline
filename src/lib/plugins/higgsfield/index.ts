@@ -118,7 +118,7 @@ function logHiggsfieldRequest(endpoint: string, body: Record<string, unknown>): 
     'none'
   const line = '═'.repeat(72)
   console.log(`\n${line}`)
-  console.log(`Higgsfield ${endpoint} — copy this prompt into the dashboard:`)
+  console.log(`Higgsfield ${endpoint} - copy this prompt into the dashboard:`)
   console.log(line)
   console.log(String(body.prompt ?? ''))
   console.log('─'.repeat(72))

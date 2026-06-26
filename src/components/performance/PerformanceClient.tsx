@@ -218,7 +218,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
       .map(([month, v]) => ({ month, spend: Math.round(v.spend), leads: v.leads, reach: v.reach, cpl: v.leads > 0 ? Math.round(v.spend / v.leads) : 0 }))
   }, [filteredHistoricalAds, platform])
 
-  // Seasonal aggregation — group monthly data into India's four broad seasons.
+  // Seasonal aggregation - group monthly data into India's four broad seasons.
   const seasonalData = useMemo(() => {
     if (platform === 'youtube') return []
     const SEASONS = [
@@ -327,7 +327,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
       // Honest completion feedback - the button being re-enabled isn't enough.
       const timing = timingSync.ok ? await timingSync.json().catch(() => ({})) : null
       if (!perfSync.ok || !timingSync.ok) {
-        setSyncMsg('Synced with errors — some data may not have updated.')
+        setSyncMsg('Synced with errors - some data may not have updated.')
       } else {
         const tInfo = timing?.updated != null
           ? ` · timing: ${timing.updated} ads${timing.errors ? `, ${timing.errors} failed` : ''}`
@@ -335,7 +335,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
         setSyncMsg(`Last synced ${new Date().toLocaleTimeString()}${tInfo}`)
       }
     } catch {
-      setSyncMsg('Sync failed — check your connection and try again.')
+      setSyncMsg('Sync failed - check your connection and try again.')
     } finally {
       setSyncing(false)
     }
@@ -510,15 +510,15 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
         </div>
       ) : (
         <div className="bg-white border border-brand-border rounded-xl p-12 text-center text-brand-muted">
-          No live sync data yet — post a creative and sync to see time-series analytics.
+          No live sync data yet - post a creative and sync to see time-series analytics.
         </div>
       )}
 
-      {/* ── Monthly & Seasonal charts — always visible when historical data exists ── */}
+      {/* ── Monthly & Seasonal charts - always visible when historical data exists ── */}
       {platform !== 'youtube' && importedMonthly.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-base font-medium text-brand-dark">Seasonal Performance</h2>
-          <p className="text-xs text-brand-muted -mt-2">Historical data from Meta — filtered by the selected date range above.</p>
+          <p className="text-xs text-brand-muted -mt-2">Historical data from Meta - filtered by the selected date range above.</p>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-white border border-brand-border rounded-xl p-5 shadow-sm">
@@ -667,7 +667,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
               <p className="text-xs text-brand-muted mt-0.5">
                 {timingDataAvailable
                   ? 'Aggregate view across all imported Meta ads. Click any ad below to see its individual timing breakdown.'
-                  : 'No timing data yet — click "Sync" above to pull hourly and day-of-week breakdowns from Meta.'}
+                  : 'No timing data yet - click "Sync" above to pull hourly and day-of-week breakdowns from Meta.'}
               </p>
             </div>
           </div>

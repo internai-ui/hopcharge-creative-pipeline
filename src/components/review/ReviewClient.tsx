@@ -213,7 +213,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
             <Spinner className="w-4 h-4 text-amber-600 shrink-0" />
             <p className="text-sm text-amber-800">
               <span className="font-medium">{parts.join(' and ')} generating.</span>{' '}
-              Auto-refreshes every 15 s — or hit &ldquo;Check now&rdquo; on a card.
+              Auto-refreshes every 15 s - or hit &ldquo;Check now&rdquo; on a card.
             </p>
           </div>
         )
@@ -353,7 +353,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                       </>
                     ) : (
                       <span className="text-sm text-brand-muted">
-                        {selected.status === 'approved' ? 'Approved — ready to publish.' :
+                        {selected.status === 'approved' ? 'Approved - ready to publish.' :
                          selected.status === 'rejected' ? 'Rejected.' :
                          selected.status === 'published' ? 'Published.' :
                          'Waiting for generation to finish.'}

@@ -283,7 +283,7 @@ Return only the JSON, no other text.`
     })
 
     // Re-score pending/selected ideas against new trend data.
-    // Skip entirely when all topic scores are zero — this means Google Trends was
+    // Skip entirely when all topic scores are zero - this means Google Trends was
     // rate-limited and returned no signal. Demoting ideas on bad data produces
     // false-positive `idea_demoted_stale_trend` noise in Agent Actions.
     const topicScores = analysis.topicScores as Record<string, number>

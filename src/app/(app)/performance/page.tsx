@@ -69,7 +69,7 @@ export default async function PerformancePage() {
     cpl: r.count > 0 ? Math.round(r.cplSum / r.count) : 0,
   }))
 
-  // Keep timing breakdowns — client uses them for per-ad drilldown rows
+  // Keep timing breakdowns - client uses them for per-ad drilldown rows
   // Cast Json fields to the expected types; they're stored with the right shape.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const historicalAdsForClient = historicalAds as any[]

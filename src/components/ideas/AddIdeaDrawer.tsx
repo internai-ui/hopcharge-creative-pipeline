@@ -212,7 +212,7 @@ export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
               rows={3}
               className={`${inputCls} resize-none`}
             />
-            <p className="text-xs text-brand-muted mt-1">All ads run a &ldquo;Send WhatsApp Message&rdquo; button — make the copy lead to a chat.</p>
+            <p className="text-xs text-brand-muted mt-1">All ads run a &ldquo;Send WhatsApp Message&rdquo; button - make the copy lead to a chat.</p>
           </div>
 
           <div>

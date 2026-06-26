@@ -127,7 +127,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date and
   const spinMinDown  = () => { const m = (minute - 1 + 60) % 60; setMinute(m); emit(selDate, hour, m) }
   const spinAmpmFlip = () => { const h24 = to24h(h12, ampm === 'AM' ? 'PM' : 'AM'); setHour(h24); emit(selDate, h24, minute) }
 
-  // Typed commit handlers — validate and clamp
+  // Typed commit handlers - validate and clamp
   const commitHour = (raw: string) => {
     const n = parseInt(raw, 10)
     if (!isNaN(n)) {
@@ -206,7 +206,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date and
             })}
           </div>
 
-          {/* Time — editable spinners */}
+          {/* Time - editable spinners */}
           <div className="mt-3 pt-3 border-t border-brand-border">
             <p className="text-xs text-brand-muted mb-2">Time</p>
             <div className="flex gap-1.5">

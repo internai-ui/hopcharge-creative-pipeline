@@ -215,7 +215,7 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
             {latest.platformFormatTrends && (
               <div>
                 <h3 className="text-xs font-medium text-brand-muted uppercase tracking-wide mb-1">Ad-Format Performance</h3>
-                <p className="text-xs text-brand-muted mb-3">Which creative forms convert — from the last full refresh (or a baseline until one runs).</p>
+                <p className="text-xs text-brand-muted mb-3">Which creative forms convert - from the last full refresh (or a baseline until one runs).</p>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-brand-border">
@@ -246,9 +246,9 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
             {formatInterest.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-brand-muted uppercase tracking-wide mb-1">Content-Format Interest</h3>
-                <p className="text-xs text-brand-muted mb-3">Audience search interest in each content form (live, every refresh) — a demand signal, <span className="font-medium">not ad performance</span>.</p>
+                <p className="text-xs text-brand-muted mb-3">Audience search interest in each content form (live, every refresh) - a demand signal, <span className="font-medium">not ad performance</span>.</p>
                 {formatInterest.every((f) => f.score === 0) ? (
-                  <p className="text-xs text-brand-muted">No data yet — run a refresh.</p>
+                  <p className="text-xs text-brand-muted">No data yet - run a refresh.</p>
                 ) : (
                   <div className="space-y-2.5">
                     {formatInterest.map((f) => (
@@ -287,7 +287,7 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
                   <Tooltip
                     contentStyle={{ background: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-border)', borderRadius: 8 }}
                     labelStyle={{ color: 'var(--chart-tooltip-label)', fontWeight: 600, marginBottom: 4 }}
-                    formatter={(value, name) => [value != null ? Number(value).toFixed(2) : '—', name]}
+                    formatter={(value, name) => [value != null ? Number(value).toFixed(2) : '-', name]}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" />
                   {topTopics.map((topic, i) => (
