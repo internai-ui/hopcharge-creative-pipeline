@@ -25,27 +25,33 @@
  */
 
 // ── Van description strings ──────────────────────────────────────────────────
+//
+// NOTE: these prompt strings deliberately describe the van as UNBRANDED (no wordmark
+// or lettering on the panels), even though the real fleet vans carry the "hopcharge™"
+// wordmark. Diffusion models render that wordmark as garbled, inconsistent text, so we
+// omit it from the prompt and composite the authentic logo onto the finished image in
+// post (see src/lib/logo-overlay.ts). Do not re-add "hopcharge logo" here.
 
 /** Full van description for API prompts (no character limit) */
 export const VAN_A_FULL =
   'compact Maruti Suzuki Eeco-style white Indian micro cargo van - white front cabin, ' +
   'royal blue vinyl wrap on the upper rear cargo section, bright gold/amber horizontal accent stripe ' +
-  'along the full lower body, "hopcharge™" wordmark and EV-charging icon printed on the blue panel, ' +
+  'along the full lower body, plain unlabelled blue panel with no logo or lettering (brand mark added in post), ' +
   'sliding side door open revealing internal charging equipment, thick black rubber charging cable ' +
   '(~5 cm diameter) running from the van to the EV charge port'
 
 export const VAN_B_FULL =
   'white cube-shaped mobile battery box on a light truck chassis - large rectangular white box body ' +
-  'with red border trim on all panel edges and bright yellow corner accents, "hopcharge™" and ' +
-  '"TATA EV" co-branding on the white panels, rear double doors open, thick black charging cable ' +
+  'with red border trim on all panel edges and bright yellow corner accents, plain unlabelled white panels ' +
+  'with no logo or lettering (brand marks added in post), rear double doors open, thick black charging cable ' +
   'running from the box to the customer\'s EV'
 
 /** Compact van description for browser prompts (character-budget ~120 chars) */
 export const VAN_A_BRIEF =
-  'white Maruti Eeco cargo van, royal blue rear wrap, gold horizontal stripe, hopcharge logo, thick charging cable to EV'
+  'white Maruti Eeco cargo van, royal blue rear wrap, gold horizontal stripe, plain unlabelled panels (no logo or lettering), thick charging cable to EV'
 
 export const VAN_B_BRIEF =
-  'white cube battery box truck, red trim, yellow corners, hopcharge branding, thick charging cable to EV'
+  'white cube battery box truck, red trim, yellow corners, plain unlabelled panels (no logo or lettering), thick charging cable to EV'
 
 // ── Setting string ────────────────────────────────────────────────────────────
 
@@ -88,6 +94,12 @@ export const NEGATIVE_VIDEO =
   'distorted faces, extra fingers, anatomical errors, ' +
   'AI glitch artefacts, morphing faces, flickering textures'
 
+// NEGATIVE_IMAGE is only meaningful for models that expose a real (CFG) negative
+// prompt field. The Flux family (Replicate Flux, browser Flux/Flyne) has none - a
+// negative list there is a no-op at best and can pull the named concepts INTO frame
+// at worst. For those, use IMAGE_POSITIVE_GUARDRAILS (below) instead, which states
+// the same intent positively. NEGATIVE_IMAGE is wired into Higgsfield Soul, whose
+// prompt path accepts an "Avoid:" clause (mirroring the DOP video path).
 export const NEGATIVE_IMAGE =
   'blurry, out of focus, low resolution, noisy, grainy, JPEG artefacts, ' +
   'watermark, text overlay, speech bubble, caption burned into image, ' +
@@ -98,6 +110,15 @@ export const NEGATIVE_IMAGE =
   'wrong van colour, generic van, no Hopcharge branding, ' +
   'distorted hands, extra fingers, uncanny faces, ' +
   'stock photo feel, fake smile, posed stiffness'
+
+// Positive-framed quality guardrails. Baked into EVERY image prompt so the intent of
+// NEGATIVE_IMAGE reaches models with no negative-prompt field (Flux/Flyne) without
+// the backfire. Also instructs the model to leave the frame clean of text/logos -
+// the real Hopcharge logo is composited in post (see src/lib/logo-overlay.ts).
+export const IMAGE_POSITIVE_GUARDRAILS =
+  'Photorealistic, sharp focus, correct anatomy (five fingers per hand, natural undistorted faces), ' +
+  'authentic candid expression, clean uncluttered frame, ' +
+  'no text, lettering or logos rendered in-frame (brand mark is added in post).'
 
 // ── Quality / style suffixes ─────────────────────────────────────────────────
 
@@ -129,12 +150,12 @@ interface BuildVideoOptions {
 export function buildVideoPrompt(videoVisual: string, options: BuildVideoOptions = {}): string {
   const { brief = false, van = 'A' } = options
   // videoVisual already carries the full shot list, camera moves, setting, lighting
-  // and mood. Append only a concise brand anchor (the van livery the model must get
-  // right) + the technical/format suffix - no duplicated, conflicting direction.
+  // and mood. Append only a concise vehicle anchor (the van's paint scheme the model
+  // must get right - panels are unbranded) + the technical/format suffix.
   const vanDesc = van === 'A' ? VAN_A_BRIEF : VAN_B_BRIEF
   return [
     videoVisual,
-    `Hopcharge van (render livery exactly): ${vanDesc}.`,
+    `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
     brief ? 'Cinematic, smooth stabilised camera, golden-hour grade, 9:16 vertical.' : VIDEO_QUALITY,
   ].join(' ')
 }
@@ -169,7 +190,8 @@ export function buildImagePrompt(imageVisual: string, options: BuildImageOptions
   const vanDesc = van === 'A' ? VAN_A_BRIEF : VAN_B_BRIEF
   return [
     imageVisual,
-    `Hopcharge van (render livery exactly): ${vanDesc}.`,
+    `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
+    IMAGE_POSITIVE_GUARDRAILS,
     brief ? 'Advertising photo, 9:16 vertical, no text overlay.' : IMAGE_QUALITY,
   ].join(' ')
 }

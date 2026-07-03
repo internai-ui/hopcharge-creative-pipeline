@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import type { VideoGeneratorPlugin } from '../interfaces'
 import type { Idea } from '@prisma/client'
 import { writeJob, readJob } from './jobs'
+import { resolveReferenceToLocalPath } from './reference'
 
 const SESSION_FILE = path.join(process.cwd(), '.browser-session-kling.json')
 const CONFIG_FILE  = path.join(process.cwd(), '.browser-config-kling.json')
@@ -25,12 +26,20 @@ export class KlingBrowserGenerator implements VideoGeneratorPlugin {
     return buildVideoPrompt(idea.videoVisual, { brief: true })
   }
 
-  async submitJob({ idea }: { idea: Idea; referenceAssets?: string[] }): Promise<{ jobId: string }> {
+  async submitJob({ idea, referenceAssets }: { idea: Idea; referenceAssets?: string[] }): Promise<{ jobId: string }> {
     if (!fs.existsSync(SESSION_FILE)) throw new Error('Kling session not found. Run: npm run browser:setup:kling')
     if (!fs.existsSync(CONFIG_FILE))  throw new Error('Kling UI config not found. Run: npm run browser:setup:kling')
 
     const jobId  = `kling-${crypto.randomUUID()}`
     const prompt = this.buildPrompt(idea)
+
+    // If a first-frame reference was supplied, resolve it to a local file the automation
+    // can upload (image-to-video) for Sara/brand consistency. Falls back to text-to-video.
+    let referenceImage: string | null = null
+    if (referenceAssets?.[0]) {
+      referenceImage = await resolveReferenceToLocalPath(referenceAssets[0])
+      if (!referenceImage) console.warn(`[kling] Could not resolve reference image "${referenceAssets[0]}" - using text-to-video`)
+    }
 
     fs.mkdirSync(LOG_DIR, { recursive: true })
     const logFile   = path.join(LOG_DIR, `${jobId}.log`)
@@ -45,6 +54,7 @@ export class KlingBrowserGenerator implements VideoGeneratorPlugin {
         ...process.env,
         JOB_ID: jobId,
         PROMPT: prompt,
+        ...(referenceImage ? { REFERENCE_IMAGE: referenceImage } : {}),
         BROWSER_HEADLESS:    process.env.BROWSER_HEADLESS ?? 'false',
         BROWSER_SESSION_FILE: SESSION_FILE,
         BROWSER_CONFIG_FILE:  CONFIG_FILE,

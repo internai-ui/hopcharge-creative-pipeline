@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db'
 import { storage } from '@/lib/storage'
 import { getVideoGenerator, getImageGenerator } from '@/lib/plugins/registry'
 import { downloadImageBuffer } from '@/lib/download'
+import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
+import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
 
 const THIRTY_MINUTES = 30 * 60 * 1000
 
@@ -24,8 +26,10 @@ export async function pollCreativeStatus(): Promise<void> {
         const result = await imageGenerator.pollJobStatus(jobId)
         if (result.status === 'complete' && result.fileUrls?.[0]) {
           const { buffer, ext } = await downloadImageBuffer(result.fileUrls[0])
+          // The van is rendered unbranded; stamp the real Hopcharge logo here for a consistent mark.
+          const finalBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
           const filePath = `creatives/${creative.id}/original.${ext}`
-          await storage.save(filePath, buffer)
+          await storage.save(filePath, finalBuffer)
           await prisma.creative.update({
             where: { id: creative.id },
             data: { status: 'ready_for_review', originalFilePath: filePath },
@@ -51,8 +55,10 @@ export async function pollCreativeStatus(): Promise<void> {
         // Download file to storage
         const response = await fetch(result.fileUrl)
         const buffer = Buffer.from(await response.arrayBuffer())
+        // The van is rendered unbranded; burn the real Hopcharge logo onto the frames.
+        const finalBuffer = videoLogoOverlayEnabled() ? await overlayLogoOnVideo(buffer) : buffer
         const filePath = `creatives/${creative.id}/original.mp4`
-        await storage.save(filePath, buffer)
+        await storage.save(filePath, finalBuffer)
 
         await prisma.creative.update({
           where: { id: creative.id },

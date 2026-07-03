@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { getImageGenerator } from '@/lib/plugins/registry'
 import { storage } from '@/lib/storage'
 import { buildImagePrompt } from '@/lib/plugins/prompt-constants'
+import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
 import { NextRequest } from 'next/server'
 import fs from 'fs'
 import path from 'path'
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest) {
 
     for (const url of allUrls) {
       const { buffer, ext } = await readImageBuffer(url)
+      // The van is rendered unbranded; stamp the real Hopcharge logo here for a consistent mark.
+      const finalBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
 
       const creative = await prisma.creative.create({
         data: {
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
       })
 
       const filePath = `creatives/${creative.id}/original.${ext}`
-      await storage.save(filePath, buffer)
+      await storage.save(filePath, finalBuffer)
 
       await prisma.creative.update({
         where: { id: creative.id },

@@ -254,6 +254,12 @@ model HistoricalAd {
   hourlyBreakdown  Json?    // [{hour:0-23, impressions, spend, leads, cpl}]
   weekdayBreakdown Json?    // [{day:0-6 Sun=0, impressions, spend, leads, cpl}]
 
+  // The ad's actual creative pulled from the Meta ad account (importHistoricalCreativeImages).
+  // For image ads this is the full still; for video ads it's the video thumbnail.
+  creativeType      String?  // "image" | "video"
+  creativeSourceUrl String?  // Meta CDN URL the still was fetched from (signed, expires)
+  creativeImagePath String?  // storage-relative path to the downloaded still
+
   @@index([isSuccessful])
   @@index([cpl])
 }

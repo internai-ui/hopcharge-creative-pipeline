@@ -238,66 +238,181 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
   }, [filteredHistoricalAds, platform])
 
   const handleExport = () => {
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`
+    // Comprehensive export: the COMPLETE dataset (all time, all platforms), independent
+    // of the on-screen date/platform filters. Emits every dataset the page holds - a
+    // multi-section CSV covering the overall summary, per-creative aggregates, raw daily
+    // snapshots, full imported-ad rows, per-ad + aggregated timing breakdowns, and
+    // monthly/seasonal rollups. A leading BOM keeps Excel happy with UTF-8.
     const rows: string[] = []
+    const cell = (v: unknown): string => {
+      if (v == null) return ''
+      const s = String(v)
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const line = (...cells: unknown[]) => rows.push(cells.map(cell).join(','))
+    const blank = () => rows.push('')
+    const section = (title: string) => rows.push(`# ${title}`)
+    const n2 = (v: unknown) => Number(v ?? 0).toFixed(2)
+    const n1 = (v: unknown) => Number(v ?? 0).toFixed(1)
+    const iso = (d: string | Date) => new Date(d).toISOString().split('T')[0]
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-    rows.push('Performance Export')
-    rows.push(`Date Range,${dateRange === 'all' ? 'All time' : dateRange}`)
-    rows.push(`Platform,${platform}`)
-    rows.push(`Exported,${new Date().toLocaleString()}`)
-    rows.push('')
+    const allSnaps = snapshots
+    const allAds = initialHistoricalAds
 
-    rows.push('Summary')
-    rows.push('Metric,Value')
-    rows.push(`Total Spend,${summary.totalSpend.toFixed(2)}`)
-    rows.push(`Total Reach,${summary.totalReach}`)
-    rows.push(`Avg CPL,${summary.avgCpl.toFixed(2)}`)
-    rows.push(`Avg CPM,${summary.avgCpm.toFixed(2)}`)
-    rows.push(`Avg CTR,${summary.avgCtr.toFixed(2)}%`)
-    rows.push('')
+    // ── Metadata ──
+    section('Hopcharge Performance - Full Data Export')
+    line('Exported', new Date().toLocaleString())
+    line('Scope', 'Complete dataset (all time, all platforms) - not limited by on-screen filters')
+    line('On-screen filter (reference only)', `range=${dateRange}, platform=${platform}`)
+    line('Performance snapshots', allSnaps.length)
+    line('Imported Meta ads', allAds.length)
+    blank()
 
-    if (sortedCreatives.length > 0) {
-      rows.push('Live Creatives')
-      rows.push('Creative,Impressions,Reach,Clicks,Spend,CPM,CTR,Frequency,CPL')
-      for (const c of sortedCreatives) {
-        const t = {
-          impressions: c.snapshots.reduce((s, snap) => s + snap.impressions, 0),
-          reach: c.snapshots.reduce((s, snap) => s + snap.reach, 0),
-          clicks: c.snapshots.reduce((s, snap) => s + snap.clicks, 0),
-          spend: c.snapshots.reduce((s, snap) => s + Number(snap.spend), 0),
-          cpm: c.snapshots.reduce((s, snap) => s + Number(snap.cpm), 0) / c.snapshots.length,
-          ctr: c.snapshots.reduce((s, snap) => s + Number(snap.ctr), 0) / c.snapshots.length * 100,
-          freq: c.snapshots.reduce((s, snap) => s + Number(snap.frequency), 0) / c.snapshots.length,
-          cpl: avgCplOf(c.snapshots),
-        }
-        rows.push(`${esc(c.idea.title)},${t.impressions},${t.reach},${t.clicks},${t.spend.toFixed(2)},${t.cpm.toFixed(2)},${t.ctr.toFixed(2)}%,${t.freq.toFixed(1)},${t.cpl.toFixed(2)}`)
+    // ── Overall summary (all data) ──
+    const sSpend = allSnaps.reduce((s, x) => s + Number(x.spend), 0)
+    const sLeads = allSnaps.reduce((s, x) => s + (x.leads ?? 0), 0)
+    const sReach = allSnaps.reduce((s, x) => s + x.reach, 0)
+    const sImpr = allSnaps.reduce((s, x) => s + x.impressions, 0)
+    const sClicks = allSnaps.reduce((s, x) => s + x.clicks, 0)
+    const aSpend = allAds.reduce((s, a) => s + a.spend, 0)
+    const aLeads = allAds.reduce((s, a) => s + a.leads, 0)
+    const aReach = allAds.reduce((s, a) => s + (a.reach ?? 0), 0)
+    const aImpr = allAds.reduce((s, a) => s + (a.impressions ?? 0), 0)
+    const aClicks = allAds.reduce((s, a) => s + (a.clicks ?? 0), 0)
+    const tSpend = sSpend + aSpend, tLeads = sLeads + aLeads, tReach = sReach + aReach, tImpr = sImpr + aImpr, tClicks = sClicks + aClicks
+    section('Summary (all data)')
+    line('Metric', 'Live pipeline', 'Imported Meta', 'Combined')
+    line('Spend (INR)', n2(sSpend), n2(aSpend), n2(tSpend))
+    line('Leads', sLeads, aLeads, tLeads)
+    line('Reach', sReach, aReach, tReach)
+    line('Impressions', sImpr, aImpr, tImpr)
+    line('Clicks', sClicks, aClicks, tClicks)
+    line('Blended CPL (INR)', sLeads ? n2(sSpend / sLeads) : '', aLeads ? n2(aSpend / aLeads) : '', tLeads ? n2(tSpend / tLeads) : '')
+    line('Blended CPM (INR)', sImpr ? n2((sSpend / sImpr) * 1000) : '', aImpr ? n2((aSpend / aImpr) * 1000) : '', tImpr ? n2((tSpend / tImpr) * 1000) : '')
+    line('Blended CTR (%)', sImpr ? n2((sClicks / sImpr) * 100) : '', aImpr ? n2((aClicks / aImpr) * 100) : '', tImpr ? n2((tClicks / tImpr) * 100) : '')
+    blank()
+
+    // ── Live creatives - aggregated across ALL snapshots ──
+    const byIdea = new Map<string, { idea: Idea; snaps: SnapshotWithRelations[]; platforms: Set<string>; creativeIds: Set<string> }>()
+    for (const snap of allSnaps) {
+      const idea = snap.post.creative.idea
+      let g = byIdea.get(idea.id)
+      if (!g) { g = { idea, snaps: [], platforms: new Set(), creativeIds: new Set() }; byIdea.set(idea.id, g) }
+      g.snaps.push(snap)
+      g.platforms.add(snap.post.platform)
+      g.creativeIds.add(snap.post.creative.id)
+    }
+    if (byIdea.size > 0) {
+      section('Live Creatives - aggregated')
+      line('Idea', 'Idea ID', 'Angle', 'Funnel', 'Platforms', 'Creative IDs', 'Snapshots', 'First date', 'Last date', 'Impressions', 'Reach', 'Clicks', 'Spend', 'Leads', 'Avg CPM', 'Avg CTR %', 'Avg Frequency', 'Avg CPL')
+      const groups = [...byIdea.values()].sort((a, b) => avgCplOf(a.snaps) - avgCplOf(b.snaps))
+      for (const g of groups) {
+        const dates = g.snaps.map((s) => iso(s.snapshotDate)).sort()
+        const impressions = g.snaps.reduce((s, x) => s + x.impressions, 0)
+        const reach = g.snaps.reduce((s, x) => s + x.reach, 0)
+        const clicks = g.snaps.reduce((s, x) => s + x.clicks, 0)
+        const spend = g.snaps.reduce((s, x) => s + Number(x.spend), 0)
+        const leads = g.snaps.reduce((s, x) => s + (x.leads ?? 0), 0)
+        const cpm = g.snaps.reduce((s, x) => s + Number(x.cpm), 0) / g.snaps.length
+        const ctr = (g.snaps.reduce((s, x) => s + Number(x.ctr), 0) / g.snaps.length) * 100
+        const freq = g.snaps.reduce((s, x) => s + Number(x.frequency), 0) / g.snaps.length
+        line(g.idea.title, g.idea.id, g.idea.angle, g.idea.funnelStage ?? '', [...g.platforms].join('|'), [...g.creativeIds].join('|'), g.snaps.length, dates[0], dates[dates.length - 1], impressions, reach, clicks, n2(spend), leads, n2(cpm), n2(ctr), n1(freq), n2(avgCplOf(g.snaps)))
       }
-      rows.push('')
+      blank()
     }
 
-    if (sortedImportedAds.length > 0) {
-      rows.push('Imported Meta Ads')
-      rows.push('Ad Name,Campaign,Spend,Reach,Leads,CPL,Date From,Date To')
-      for (const ad of sortedImportedAds) {
-        rows.push(`${esc(ad.adName)},${esc(ad.campaignName ?? '')},${ad.spend.toFixed(2)},${ad.reach ?? ''},${ad.leads},${ad.cpl.toFixed(2)},${new Date(ad.dateFrom).toLocaleDateString()},${new Date(ad.dateTo).toLocaleDateString()}`)
+    // ── Performance snapshots - raw daily rows (all) ──
+    if (allSnaps.length > 0) {
+      section('Performance Snapshots - daily (raw)')
+      line('Date', 'Platform', 'Post status', 'External post ID', 'Idea', 'Angle', 'Funnel', 'Creative ID', 'Media type', 'Generator', 'Post ID', 'Impressions', 'Reach', 'Clicks', 'Spend', 'CPM', 'CTR %', 'Frequency', 'Leads', 'CPL')
+      const sorted = [...allSnaps].sort((a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime())
+      for (const s of sorted) {
+        const cr = s.post.creative
+        line(iso(s.snapshotDate), s.post.platform, s.post.status, s.post.externalPostId ?? '', cr.idea.title, cr.idea.angle, cr.idea.funnelStage ?? '', cr.id, cr.mediaType, cr.generatorName, s.post.id, s.impressions, s.reach, s.clicks, n2(s.spend), n2(s.cpm), n2(Number(s.ctr) * 100), n1(s.frequency), s.leads ?? 0, s.cpl != null ? n2(s.cpl) : '')
       }
-      rows.push('')
+      blank()
     }
 
-    if (importedMonthly.length > 0) {
-      rows.push('Monthly Breakdown')
-      rows.push('Month,Spend,Leads,Reach,CPL')
-      for (const m of importedMonthly) {
-        rows.push(`${m.month},${m.spend},${m.leads},${m.reach},${m.cpl}`)
+    // ── Imported Meta ads - full (all columns) ──
+    if (allAds.length > 0) {
+      section('Imported Meta Ads - full')
+      line('Ad name', 'Meta ad ID', 'Campaign', 'Successful', 'Spend', 'Leads', 'CPL', 'Impressions', 'Reach', 'Clicks', 'CPM', 'CTR %', 'Date from', 'Date to', 'Has hourly', 'Has weekday')
+      for (const a of [...allAds].sort((x, y) => x.cpl - y.cpl)) {
+        line(a.adName, a.metaAdId, a.campaignName ?? '', a.isSuccessful ? 'yes' : 'no', n2(a.spend), a.leads, n2(a.cpl), a.impressions ?? '', a.reach ?? '', a.clicks ?? '', a.cpm != null ? n2(a.cpm) : '', a.ctr != null ? n2(a.ctr) : '', iso(a.dateFrom), iso(a.dateTo), a.hourlyBreakdown?.length ? 'yes' : 'no', a.weekdayBreakdown?.length ? 'yes' : 'no')
       }
+      blank()
     }
 
-    const csv = rows.join('\n')
+    // ── Imported Meta ads - per-ad hourly breakdown ──
+    const adsHourly = allAds.filter((a) => a.hourlyBreakdown && a.hourlyBreakdown.length)
+    if (adsHourly.length > 0) {
+      section('Imported Meta Ads - hourly breakdown (per ad)')
+      line('Ad name', 'Meta ad ID', 'Hour', 'Leads', 'Spend', 'CPL')
+      for (const a of adsHourly) for (const h of a.hourlyBreakdown!) line(a.adName, a.metaAdId, h.hour, h.leads, n2(h.spend), n2(h.cpl))
+      blank()
+    }
+
+    // ── Imported Meta ads - per-ad weekday breakdown ──
+    const adsWeekday = allAds.filter((a) => a.weekdayBreakdown && a.weekdayBreakdown.length)
+    if (adsWeekday.length > 0) {
+      section('Imported Meta Ads - weekday breakdown (per ad)')
+      line('Ad name', 'Meta ad ID', 'Day (0=Sun)', 'Day', 'Leads', 'Spend', 'CPL')
+      for (const a of adsWeekday) for (const w of a.weekdayBreakdown!) line(a.adName, a.metaAdId, w.day, DAYS[w.day] ?? '', w.leads, n2(w.spend), n2(w.cpl))
+      blank()
+    }
+
+    // ── Aggregated timing - hourly / weekday (all ads) ──
+    if (timingHourly.length > 0) {
+      section('Aggregated Timing - hourly (all ads)')
+      line('Hour', 'Label', 'Leads', 'Spend', 'CPL')
+      for (const h of timingHourly) line(h.hour, h.label, h.leads, h.spend, h.cpl)
+      blank()
+    }
+    if (timingWeekday.length > 0) {
+      section('Aggregated Timing - weekday (all ads)')
+      line('Day (0=Sun)', 'Label', 'Leads', 'Spend', 'CPL')
+      for (const w of timingWeekday) line(w.day, w.label, w.leads, w.spend, w.cpl)
+      blank()
+    }
+
+    // ── Monthly breakdown (imported, all) ──
+    const monthly = new Map<string, { spend: number; leads: number; reach: number }>()
+    for (const a of allAds) {
+      const d = new Date(a.dateTo)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const cur = monthly.get(key) ?? { spend: 0, leads: 0, reach: 0 }
+      cur.spend += a.spend; cur.leads += a.leads; cur.reach += a.reach ?? 0
+      monthly.set(key, cur)
+    }
+    if (monthly.size > 0) {
+      section('Monthly Breakdown (imported)')
+      line('Month', 'Spend', 'Leads', 'Reach', 'CPL')
+      for (const [month, v] of [...monthly.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+        line(month, Math.round(v.spend), v.leads, v.reach, v.leads > 0 ? Math.round(v.spend / v.leads) : 0)
+      }
+      blank()
+    }
+
+    // ── Seasonal breakdown (imported, all) ──
+    if (allAds.length > 0) {
+      const SEASONS: [string, number[]][] = [['Winter (Dec-Feb)', [12, 1, 2]], ['Spring (Mar-May)', [3, 4, 5]], ['Monsoon (Jun-Sep)', [6, 7, 8, 9]], ['Autumn (Oct-Nov)', [10, 11]]]
+      section('Seasonal Breakdown (imported)')
+      line('Season', 'Spend', 'Leads', 'CPL')
+      for (const [label, months] of SEASONS) {
+        let spend = 0, leads = 0
+        for (const a of allAds) { const m = new Date(a.dateTo).getMonth() + 1; if (months.includes(m)) { spend += a.spend; leads += a.leads } }
+        line(label, Math.round(spend), leads, leads > 0 ? Math.round(spend / leads) : 0)
+      }
+      blank()
+    }
+
+    const csv = '\uFEFF' + rows.join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `performance-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `hopcharge-performance-full-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -441,9 +556,9 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
           <button
             onClick={handleExport}
             className="text-sm border border-brand-border text-brand-muted hover:text-brand-dark hover:border-brand-divider px-3 py-1.5 rounded-lg transition-all duration-200"
-            title="Export visible data as CSV"
+            title="Export the complete dataset (all time, all platforms) as a multi-section CSV"
           >
-            Export CSV
+            Export full CSV
           </button>
           <button
             onClick={handleSync}

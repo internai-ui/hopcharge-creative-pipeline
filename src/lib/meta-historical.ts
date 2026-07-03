@@ -2,6 +2,7 @@ import { anthropic as client } from '@/lib/anthropic'
 import { extractJsonObject } from '@/lib/json'
 import type { AdConcepts } from './plugins/interfaces'
 import { logPipelineIssue } from './pipeline-issues'
+import { storage } from './storage'
 
 const BASE = 'https://graph.facebook.com/v21.0'
 
@@ -169,6 +170,118 @@ export async function importHistoricalAds(): Promise<ImportResult> {
   }
 
   return { total: ads.length, withLeadData, successful, imported, errors }
+}
+
+// ── Historical creative images ────────────────────────────────────────────────
+//
+// The metrics import above stores only copy + performance. This pulls the actual
+// CREATIVE for each ad from the Meta ad account and downloads a representative still
+// into storage (full image for image ads; video thumbnail for video ads), so the
+// repo holds the previous visual creatives - the basis for new creative work.
+
+export interface CreativeImageResult {
+  scanned: number    // ads with a usable image URL found in the account
+  matched: number    // of our HistoricalAd rows that had a match in the account
+  downloaded: number // stills actually fetched + saved this run
+  skipped: number    // already had an image (and force not set)
+  errors: number
+}
+
+interface AdCreativeShape {
+  id: string
+  creative?: {
+    image_url?: string
+    thumbnail_url?: string
+    object_story_spec?: {
+      link_data?: { picture?: string }
+      video_data?: { image_url?: string }
+      photo_data?: { url?: string }
+    }
+  }
+}
+
+// Page through the ad account and map metaAdId -> best still URL + creative type.
+// Prefers a full image over a video thumbnail over the small generic thumbnail.
+async function fetchAdCreativeImageMap(
+  token: string,
+  accountId: string,
+): Promise<Map<string, { url: string; type: 'image' | 'video' }>> {
+  const map = new Map<string, { url: string; type: 'image' | 'video' }>()
+  const first = new URL(`${BASE}/act_${accountId}/ads`)
+  first.searchParams.set('fields', 'id,creative{id,image_url,thumbnail_url,object_story_spec}')
+  first.searchParams.set('limit', '100')
+  first.searchParams.set('access_token', token)
+
+  let next: string | null = first.toString()
+  let pages = 0
+  while (next && pages < 25) {
+    const data = await fetch(next).then(r => r.json()) as { data?: AdCreativeShape[]; paging?: { next?: string }; error?: { message: string } }
+    if (data.error) throw new Error(`Meta API error: ${data.error.message}`)
+    for (const ad of data.data ?? []) {
+      const c = ad.creative ?? {}
+      const oss = c.object_story_spec ?? {}
+      const fullImage = c.image_url || oss.link_data?.picture || oss.photo_data?.url
+      const videoThumb = oss.video_data?.image_url
+      const url = fullImage || videoThumb || c.thumbnail_url
+      if (url) map.set(ad.id, { url, type: fullImage ? 'image' : 'video' })
+    }
+    next = data.paging?.next ?? null
+    pages++
+  }
+  return map
+}
+
+export async function importHistoricalCreativeImages(opts: { force?: boolean } = {}): Promise<CreativeImageResult> {
+  const token = process.env.META_ACCESS_TOKEN
+  const accountId = (process.env.META_AD_ACCOUNT_ID ?? '').replace('act_', '')
+  if (!token || !accountId) {
+    throw new Error('META_ACCESS_TOKEN and META_AD_ACCOUNT_ID must be set in .env.local')
+  }
+
+  const db = await getPrisma()
+  const rows = await db.historicalAd.findMany({
+    select: { id: true, metaAdId: true, creativeImagePath: true },
+  }) as Array<{ id: string; metaAdId: string; creativeImagePath: string | null }>
+
+  const imgMap = await fetchAdCreativeImageMap(token, accountId)
+
+  let matched = 0, downloaded = 0, skipped = 0, errors = 0
+  const CONCURRENCY = 6
+  for (let i = 0; i < rows.length; i += CONCURRENCY) {
+    const batch = rows.slice(i, i + CONCURRENCY)
+    await Promise.all(batch.map(async (row) => {
+      const hit = imgMap.get(row.metaAdId)
+      if (!hit) return
+      matched++
+      if (row.creativeImagePath && !opts.force) { skipped++; return }
+      try {
+        const res = await fetch(hit.url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const ct = res.headers.get('content-type') ?? ''
+        const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg'
+        const buf = Buffer.from(await res.arrayBuffer())
+        const path = `historical-ads/${row.metaAdId}.${ext}`
+        await storage.save(path, buf)
+        await db.historicalAd.update({
+          where: { id: row.id },
+          data: { creativeImagePath: path, creativeSourceUrl: hit.url, creativeType: hit.type },
+        })
+        downloaded++
+      } catch {
+        errors++
+      }
+    }))
+  }
+
+  if (errors > 0) {
+    await logPipelineIssue({
+      severity: errors > 10 ? 'warning' : 'info',
+      stage: 'analytics',
+      description: `Historical creative-image import: ${downloaded} downloaded, ${skipped} skipped, ${errors} errors of ${matched} matched (${imgMap.size} ads scanned).`,
+    })
+  }
+
+  return { scanned: imgMap.size, matched, downloaded, skipped, errors }
 }
 
 export interface HourlyRow {

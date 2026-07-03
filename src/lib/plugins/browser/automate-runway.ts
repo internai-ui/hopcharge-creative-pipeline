@@ -16,12 +16,17 @@ import { writeJob } from './jobs'
 
 const JOB_ID       = process.env.JOB_ID!
 const PROMPT       = process.env.PROMPT!
+const REFERENCE_IMAGE = process.env.REFERENCE_IMAGE  // local first-frame path -> image-to-video
 const SESSION_FILE = process.env.BROWSER_SESSION_FILE ?? path.join(process.cwd(), '.browser-session-runway.json')
 const CONFIG_FILE  = process.env.BROWSER_CONFIG_FILE  ?? path.join(process.cwd(), '.browser-config-runway.json')
 const SCREENSHOT_DIR = path.join(process.cwd(), 'storage', 'browser-debug')
 const VIDEO_DIR      = path.join(process.cwd(), 'storage', 'browser-videos')
 const HEADLESS = process.env.BROWSER_HEADLESS !== 'false'
 const TIMEOUT  = Number(process.env.BROWSER_VIDEO_TIMEOUT_MS ?? 10 * 60 * 1000)
+// Max prompt length typed into the UI. The old 800-char cap could cut off the van
+// livery anchor + quality suffix the builder appends last; 2000 fits the full prompt.
+// Override with BROWSER_PROMPT_MAX_CHARS.
+const PROMPT_MAX_CHARS = Number(process.env.BROWSER_PROMPT_MAX_CHARS ?? 2000)
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 fs.mkdirSync(VIDEO_DIR,      { recursive: true })
@@ -65,10 +70,34 @@ async function downloadFile(url: string, dest: string): Promise<void> {
   })
 }
 
+// Best-effort upload of a first-frame reference image (image-to-video). Never throws -
+// returns false so the caller falls back to text-to-video.
+async function uploadReference(
+  page: import('playwright').Page,
+  refPath: string,
+  uploadSelector?: string,
+): Promise<boolean> {
+  const candidates = [uploadSelector, 'input[type="file"]'].filter(Boolean) as string[]
+  for (const sel of candidates) {
+    try {
+      const input = page.locator(sel).first()
+      if (await input.count() > 0) {
+        await input.setInputFiles(refPath)
+        await page.waitForTimeout(4000) // let the UI ingest the image / switch modes
+        return true
+      }
+    } catch { /* try next candidate */ }
+  }
+  return false
+}
+
 interface RunwayConfig {
   creationUrl: string
   promptSelector: string
   generateSelector: string
+  // Optional file-input selector for image-to-video upload. Falls back to
+  // input[type="file"] when not captured by the setup script.
+  uploadSelector?: string
 }
 
 async function run() {
@@ -113,6 +142,17 @@ async function run() {
       throw new Error('Runway session expired. Run: npm run browser:setup:runway to log in again.')
     }
 
+    // ── Step 1b: Upload first-frame reference (image-to-video) if provided ──
+    if (REFERENCE_IMAGE && fs.existsSync(REFERENCE_IMAGE)) {
+      const uploaded = await uploadReference(page, REFERENCE_IMAGE, config.uploadSelector)
+      if (uploaded) {
+        console.log('[runway-browser] Uploaded first-frame reference - generating image-to-video')
+        await shot(page, '01b-reference-uploaded')
+      } else {
+        console.log('[runway-browser] No file input found for reference upload - continuing text-to-video')
+      }
+    }
+
     // ── Step 2: Fill prompt ──
     // Saved config selector first, then stable fallbacks in case it was saved
     // as an invalid/unparseable selector (unquoted attr value, React Aria id).
@@ -130,7 +170,7 @@ async function run() {
     }
     await promptEl.click()
     await promptEl.fill('')
-    await promptEl.type(PROMPT.slice(0, 800), { delay: 15 })
+    await promptEl.type(PROMPT.slice(0, PROMPT_MAX_CHARS), { delay: 15 })
     await shot(page, '02-prompt-filled')
 
     // ── Step 3: Submit ──

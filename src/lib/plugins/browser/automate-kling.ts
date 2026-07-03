@@ -16,17 +16,47 @@ import { writeJob, readJob } from './jobs'
 
 const JOB_ID      = process.env.JOB_ID!
 const PROMPT      = process.env.PROMPT!
+const REFERENCE_IMAGE = process.env.REFERENCE_IMAGE  // local first-frame path -> image-to-video
 const SESSION_FILE = process.env.BROWSER_SESSION_FILE ?? path.join(process.cwd(), '.browser-session-kling.json')
 const CONFIG_FILE  = process.env.BROWSER_CONFIG_FILE  ?? path.join(process.cwd(), '.browser-config-kling.json')
 const SCREENSHOT_DIR = path.join(process.cwd(), 'storage', 'browser-debug')
 const VIDEO_DIR      = path.join(process.cwd(), 'storage', 'browser-videos')
 const HEADLESS = process.env.BROWSER_HEADLESS !== 'false'
 const TIMEOUT  = Number(process.env.BROWSER_VIDEO_TIMEOUT_MS ?? 5 * 60 * 1000)
+// Max prompt length typed into the UI. The old 500-char cap silently cut off the van
+// livery anchor + quality suffix the builder appends last; 2000 fits the full prompt.
+// Override with BROWSER_PROMPT_MAX_CHARS.
+const PROMPT_MAX_CHARS = Number(process.env.BROWSER_PROMPT_MAX_CHARS ?? 2000)
 
 interface BrowserConfig {
   creationUrl: string
   promptSelector: string
   generateSelector: string
+  // Optional file-input selector for image-to-video upload. Falls back to
+  // input[type="file"] when not captured by the setup script.
+  uploadSelector?: string
+}
+
+// Best-effort upload of a first-frame reference image to switch the tool into
+// image-to-video mode (preserves Sara/brand consistency). Never throws - returns
+// false so the caller falls back to text-to-video.
+async function uploadReference(
+  page: import('playwright').Page,
+  refPath: string,
+  uploadSelector?: string,
+): Promise<boolean> {
+  const candidates = [uploadSelector, 'input[type="file"]'].filter(Boolean) as string[]
+  for (const sel of candidates) {
+    try {
+      const input = page.locator(sel).first()
+      if (await input.count() > 0) {
+        await input.setInputFiles(refPath)
+        await page.waitForTimeout(4000) // let the UI ingest the image / switch modes
+        return true
+      }
+    } catch { /* try next candidate */ }
+  }
+  return false
 }
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
@@ -116,12 +146,23 @@ async function run() {
 
     await shot(page, '02-loaded')
 
+    // ── Step 1b: Upload first-frame reference (image-to-video) if provided ──
+    if (REFERENCE_IMAGE && fs.existsSync(REFERENCE_IMAGE)) {
+      const uploaded = await uploadReference(page, REFERENCE_IMAGE, config.uploadSelector)
+      if (uploaded) {
+        console.log('[kling] Uploaded first-frame reference - generating image-to-video')
+        await shot(page, '02b-reference-uploaded')
+      } else {
+        console.log('[kling] No file input found for reference upload - continuing text-to-video')
+      }
+    }
+
     // ── Step 2: Fill in the prompt using the saved selector ──
     const promptEl = page.locator(config.promptSelector).first()
     await promptEl.waitFor({ state: 'visible', timeout: 20000 })
     await promptEl.click()
     await promptEl.fill('')
-    await promptEl.type(PROMPT.slice(0, 500), { delay: 20 })
+    await promptEl.type(PROMPT.slice(0, PROMPT_MAX_CHARS), { delay: 20 })
     await shot(page, '03-prompt-filled')
 
     // ── Step 3: Click the generate button ──

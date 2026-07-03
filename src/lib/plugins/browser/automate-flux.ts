@@ -22,6 +22,10 @@ const SCREENSHOT_DIR = path.join(process.cwd(), 'storage', 'browser-debug')
 const IMAGE_DIR      = path.join(process.cwd(), 'storage', 'browser-images')
 const HEADLESS = process.env.BROWSER_HEADLESS !== 'false'
 const TIMEOUT  = Number(process.env.BROWSER_IMAGE_TIMEOUT_MS ?? 3 * 60 * 1000)
+// Max prompt length typed into the UI. The old 500-char cap silently cut off the van
+// livery anchor + quality suffix the builder appends last; 2000 fits the full prompt
+// and is well within these editors' input limits. Override with BROWSER_PROMPT_MAX_CHARS.
+const PROMPT_MAX_CHARS = Number(process.env.BROWSER_PROMPT_MAX_CHARS ?? 2000)
 
 const DEFAULT_URL = 'https://elevenlabs.io/app/image-video?modality=image'
 
@@ -154,7 +158,7 @@ async function run() {
     await promptEl.waitFor({ state: 'visible', timeout: 20000 })
     await promptEl.click()
     await promptEl.fill('')
-    await promptEl.type(PROMPT.slice(0, 500), { delay: 10 })
+    await promptEl.type(PROMPT.slice(0, PROMPT_MAX_CHARS), { delay: 10 })
     await shot(page, '02-prompt-filled')
 
     // ── Step 3: Click generate ──

@@ -22,6 +22,10 @@ const SCREENSHOT_DIR = path.join(process.cwd(), 'storage', 'browser-debug')
 const IMAGE_DIR      = path.join(process.cwd(), 'storage', 'browser-images')
 const HEADLESS = process.env.BROWSER_HEADLESS !== 'false'
 const TIMEOUT  = Number(process.env.BROWSER_IMAGE_TIMEOUT_MS ?? 5 * 60 * 1000)
+// Max prompt length typed into the UI. The old 800-char cap could cut off the van
+// livery anchor + quality suffix the builder appends last; 2000 fits the full prompt.
+// Override with BROWSER_PROMPT_MAX_CHARS.
+const PROMPT_MAX_CHARS = Number(process.env.BROWSER_PROMPT_MAX_CHARS ?? 2000)
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 fs.mkdirSync(IMAGE_DIR,      { recursive: true })
@@ -191,7 +195,7 @@ async function run() {
     await promptEl.waitFor({ state: 'visible', timeout: 20000 })
     await promptEl.click()
     await promptEl.fill('')
-    await promptEl.type(PROMPT.slice(0, 800), { delay: 15 })
+    await promptEl.type(PROMPT.slice(0, PROMPT_MAX_CHARS), { delay: 15 })
     await shot(page, '03-prompt-filled')
 
     // ── Step 3: Click generate ──

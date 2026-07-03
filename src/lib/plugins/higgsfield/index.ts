@@ -1,6 +1,6 @@
 import type { VideoGeneratorPlugin, ImageGeneratorPlugin } from '../interfaces'
 import type { Idea } from '@prisma/client'
-import { buildVideoPrompt, NEGATIVE_VIDEO } from '../prompt-constants'
+import { buildVideoPrompt, NEGATIVE_VIDEO, NEGATIVE_IMAGE } from '../prompt-constants'
 
 /**
  * Higgsfield image + video generation (platform.higgsfield.ai, v2 API).
@@ -143,7 +143,9 @@ async function getStatus(jobId: string): Promise<{ our: OurStatus; urls: string[
 // still, else a trained Soul ID. Shared by submitJob() and generate().
 function buildSoulBody(prompt: string, referenceAssets?: string[]): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    prompt,
+    // Soul has no dedicated negative-prompt field, so fold the exclusions into the
+    // prompt as an "Avoid:" clause - the same pattern the DOP video path uses.
+    prompt: `${prompt}\n\nAvoid: ${NEGATIVE_IMAGE}`,
     width_and_height: process.env.HIGGSFIELD_SOUL_SIZE ?? '1536x2048', // vertical, closest Soul size to 9:16
     quality: process.env.HIGGSFIELD_SOUL_QUALITY ?? '1080p',
     batch_size: 1,
