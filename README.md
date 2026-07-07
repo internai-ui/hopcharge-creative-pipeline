@@ -18,6 +18,7 @@ An internal automated marketing pipeline for Hopcharge. It orchestrates the full
 | Performance | `/performance` | Analytics dashboard - CPL over time, spend vs. impressions, sortable per-creative table, daily snapshot drill-down, best-time-to-run timing analysis. |
 | Trends | `/trends` | Live trend intelligence - rising/declining topics, platform format trends, competitor ad insights, idea staleness table, topic score history chart. |
 | Evaluation | `/evaluation` | Pipeline health - active issues by severity, agent decision log, human override rate, AI-generated evaluation report. |
+| Automation | `/automation` | Control the background jobs that run the pipeline on a schedule. Master switch plus a per-job on/off toggle and editable cron; **Run now** fires any job immediately. Changes apply live - no restart. |
 
 ---
 
@@ -59,7 +60,7 @@ Open [http://localhost:3000](http://localhost:3000) - you'll be redirected to `/
 
 > **All plugin slots default to `stub` mode** - the app is fully functional with no external API keys.
 >
-> **Background job automation ships OFF.** Scheduled jobs only run when you set `ENABLE_JOB_AUTOMATION=true` (see [Daily operation](#daily-operation) and [Enabling automation](#enabling-automation-the-toggle)). Either way, `DATABASE_URL` must point at a reachable Postgres at startup; when automation is on, pg-boss creates its own queue tables on first run.
+> **Background job automation ships OFF.** Nothing runs on a schedule until you flip the master switch on the `/automation` page (its first-boot default is seeded from `ENABLE_JOB_AUTOMATION`, which ships `false`). See [Daily operation](#daily-operation) and [Enabling automation](#enabling-automation). Either way, `DATABASE_URL` must point at a reachable Postgres at startup; when automation is on, pg-boss creates its own queue tables on first run.
 
 ### MinIO (local object storage)
 
@@ -132,7 +133,7 @@ Two supporting automations run alongside the loop:
 
 ## Daily operation
 
-Two modes depending on the [automation toggle](#enabling-automation-the-toggle). **Today the engine ships with automation OFF**, so start with the first checklist.
+Two modes depending on the [automation switch](#enabling-automation). **Today the engine ships with automation OFF**, so start with the first checklist.
 
 ### A) Day-to-day with automation OFF *(current default)*
 
@@ -156,7 +157,7 @@ curl -X POST http://localhost:3000/api/posts/reconcile       # detect deleted ad
 
 ### B) Day-to-day with automation ON
 
-Once you set `ENABLE_JOB_AUTOMATION=true`, the scheduled jobs handle the *timing* of ideation, trend refresh, analytics, and creative downloads for you. Your day shrinks to the **human gates only**:
+Once you flip the master switch on the `/automation` page, the scheduled jobs handle the *timing* of ideation, trend refresh, analytics, and creative downloads for you. Your day shrinks to the **human gates only**:
 
 1. **Triage the morning's ideas** - the `feedback-loop` + `trend-context` jobs (06:00 / 08:00) will have produced fresh, trend-scored ideas overnight. On `/ideas`, review them and mark keepers `selected`.
 2. **Kick off production** - click **Generate** on selected ideas. *(Still manual by design - this spends credits.)*
@@ -170,9 +171,9 @@ In short: **automation removes the "remember to refresh/sync/generate-ideas/down
 
 ## Background jobs
 
-> **Automation is currently OFF.** The full job system is built on `pg-boss` (a Postgres-backed queue) and ready to go, but it is **gated behind a toggle that ships disabled** (`ENABLE_JOB_AUTOMATION=false`). Until you flip it on, nothing runs on a schedule - you operate the pipeline manually (see [Daily operation](#daily-operation)). Every job's logic is also exposed as an API endpoint / UI action, so manual mode loses no functionality - only the automatic *timing*.
+> **Automation is currently OFF.** The full job system is built on `pg-boss` (a Postgres-backed queue) and ready to go, but it ships with the master switch **off**. Until you flip it on, nothing runs on a schedule - you operate the pipeline manually (see [Daily operation](#daily-operation)). Every job's logic is also exposed as an API endpoint / UI action, so manual mode loses no functionality - only the automatic *timing*.
 
-When enabled, jobs are registered once at server startup (`src/lib/jobs/index.ts`, invoked from `src/instrumentation.ts`) and run on the cron schedules below.
+Automation state is a singleton row in Postgres (`AutomationConfig`) controlled at runtime from the [`/automation` page](#enabling-automation) - a master switch, a per-job on/off toggle, and an editable cron per job. Workers are registered once at server startup (`src/lib/jobs/index.ts`, invoked from `src/instrumentation.ts`); toggling then schedules/unschedules them live, so no restart is needed.
 
 | Job | Default schedule | What it does |
 |---|---|---|
@@ -180,36 +181,32 @@ When enabled, jobs are registered once at server startup (`src/lib/jobs/index.ts
 | `sync-performance` | Every 6 hours | Fetches daily analytics snapshots for all published posts; detects creative fatigue. |
 | `trend-context` | Daily at 06:00 | Fetches Google Trends + web search + competitor ads; synthesises a `TrendContext`; re-scores all pending ideas. |
 | `feedback-loop` | Daily at 08:00 | Reads 30-day performance, assembles a `PerformanceContext`, asks the idea generator for new ideas based on what's winning (by CPL). |
+| `reconcile-posts` | Every 12 hours | Detects ads deleted in Meta Ads Manager after publishing and marks them in the queue. |
 
-A `reconcile-posts` job (`src/lib/jobs/reconcile-posts.ts`) also exists to detect ads deleted in Meta Ad Manager after publishing; trigger it via `POST /api/posts/reconcile`.
+### Enabling automation
 
-### Enabling automation (the toggle)
+Automation is controlled from the **`/automation` page**, not an env var - flip the **master switch** on and the enabled jobs start immediately (no restart). From the same page you can toggle each job independently, edit its cron (presets or a custom expression), and hit **Run now** to fire any job once, ignoring its schedule.
 
-Automation is a single switch. To turn it **on**:
-
-```bash
-# in .env.local
-ENABLE_JOB_AUTOMATION=true
-```
-
-Then restart the server (`npm run dev` or `npm start`). On boot you'll see `pg-boss jobs registered` in the logs instead of the "Job automation disabled" message, and the four jobs begin running on their schedules. To turn it back **off**, set it to `false` (or remove the line) and restart.
-
-The switch lives in `src/instrumentation.ts`; pg-boss creates its own queue tables in your Postgres on first run, so no migration is needed.
+`ENABLE_JOB_AUTOMATION` in `.env.local` only **seeds the master switch's default on first boot** (it ships `false`); after that the state saved in Postgres wins and the `/automation` toggle is the source of truth. `src/instrumentation.ts` re-applies that saved state on restart, and pg-boss creates its own queue tables on first run, so no migration is needed.
 
 ### Overriding schedules
 
-Set any of these in `.env.local` using cron syntax:
+Edit any job's schedule from the `/automation` page, or set an env default (used until a UI override is saved) in `.env.local` using cron syntax:
 
 ```
 CRON_TREND_CONTEXT=0 6 * * *
 CRON_FEEDBACK_LOOP=0 8 * * *
 CRON_SYNC_PERFORMANCE=0 */6 * * *
 CRON_POLL_CREATIVES=*/1 * * * *
+CRON_RECONCILE_POSTS=0 */12 * * *
 ```
 
 ### Triggering jobs manually
 
+Use **Run now** on the `/automation` page, or `POST /api/automation/run` with a job name. The per-stage endpoints work too:
+
 ```bash
+curl -X POST http://localhost:3000/api/automation/run -H 'Content-Type: application/json' -d '{"name":"trend-context"}'
 curl -X POST http://localhost:3000/api/trends/refresh
 curl -X POST http://localhost:3000/api/performance/sync
 curl -X POST http://localhost:3000/api/posts/reconcile
