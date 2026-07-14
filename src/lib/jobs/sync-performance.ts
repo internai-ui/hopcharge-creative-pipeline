@@ -21,8 +21,15 @@ export async function syncPerformance(): Promise<void> {
   const analytics = getMetaAnalytics()
   const today = new Date()
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+  const threshold = Number(process.env.CPL_SUCCESS_THRESHOLD ?? 100)
 
-  for (const post of posts) {
+  // fetchPerformance is one Meta HTTP round-trip per post, so a serial loop makes
+  // wall-clock scale linearly with post count (and blow past serverless timeouts).
+  // Each post's work is fully independent (its own snapshot + issue rows), so run
+  // them with a bounded worker pool: wall-clock ≈ ceil(N / CONCURRENCY) round-trips.
+  const CONCURRENCY = Math.max(1, Number(process.env.SYNC_CONCURRENCY ?? 6))
+
+  async function syncOne(post: (typeof posts)[number]): Promise<void> {
     try {
       const snapshot = await analytics.fetchPerformance({
         externalPostId: post.externalPostId!,
@@ -45,8 +52,6 @@ export async function syncPerformance(): Promise<void> {
           rawData: snapshot.rawData ?? undefined,
         },
       })
-
-      const threshold = Number(process.env.CPL_SUCCESS_THRESHOLD ?? 100)
 
       // Update the historical baseline with this snapshot's CPL / leads
       if (snapshot.cpl != null && post.externalPostId) {
@@ -107,4 +112,14 @@ export async function syncPerformance(): Promise<void> {
       })
     }
   }
+
+  // Bounded worker pool: CONCURRENCY workers pull from a shared cursor until drained.
+  let cursor = 0
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, posts.length) }, async () => {
+      while (cursor < posts.length) {
+        await syncOne(posts[cursor++])
+      }
+    }),
+  )
 }
