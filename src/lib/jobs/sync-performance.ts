@@ -21,20 +21,36 @@ export async function syncPerformance(): Promise<void> {
   const analytics = getMetaAnalytics()
   const today = new Date()
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+  const dateRange = { from: yesterday, to: today }
   const threshold = Number(process.env.CPL_SUCCESS_THRESHOLD ?? 100)
 
-  // fetchPerformance is one Meta HTTP round-trip per post, so a serial loop makes
-  // wall-clock scale linearly with post count (and blow past serverless timeouts).
-  // Each post's work is fully independent (its own snapshot + issue rows), so run
-  // them with a bounded worker pool: wall-clock ≈ ceil(N / CONCURRENCY) round-trips.
+  // Prefer a single account-level batch call (Meta) over one request per post: if
+  // the plugin supports it, fetch every ad's insights up front, keyed by ad id. On
+  // failure fall back to the per-post path. Plugins without a batch method (the
+  // stub) always use per-post fetchPerformance.
+  let batch: Map<string, Awaited<ReturnType<typeof analytics.fetchPerformance>>> | null = null
+  if (analytics.fetchPerformanceBatch) {
+    try {
+      batch = await analytics.fetchPerformanceBatch({
+        externalPostIds: posts.map((p) => p.externalPostId!).filter(Boolean),
+        dateRange,
+      })
+    } catch (err) {
+      console.warn('[sync] batch insights failed, falling back to per-post fetch:', err)
+    }
+  }
+
+  // DB writes remain independent per post; a bounded worker pool keeps them
+  // concurrent without unbounded parallelism.
   const CONCURRENCY = Math.max(1, Number(process.env.SYNC_CONCURRENCY ?? 6))
 
   async function syncOne(post: (typeof posts)[number]): Promise<void> {
     try {
-      const snapshot = await analytics.fetchPerformance({
-        externalPostId: post.externalPostId!,
-        dateRange: { from: yesterday, to: today },
-      })
+      const snapshot = batch
+        ? batch.get(post.externalPostId!)
+        : await analytics.fetchPerformance({ externalPostId: post.externalPostId!, dateRange })
+      // No insights for this ad in the window (no delivery, deleted, or filtered out).
+      if (!snapshot) return
 
       await prisma.performanceSnapshot.create({
         data: {

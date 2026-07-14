@@ -132,6 +132,14 @@ export interface AnalyticsPlugin {
     externalPostId: string
     dateRange: { from: Date; to: Date }
   }): Promise<Omit<PerformanceSnapshot, 'id' | 'createdAt' | 'postId'>>
+  // Optional bulk variant: fetch insights for many ads in as few API calls as
+  // possible (e.g. Meta's account-level /insights?level=ad), keyed by externalPostId.
+  // Ads with no data in the window simply have no entry. Plugins that omit this fall
+  // back to per-post fetchPerformance.
+  fetchPerformanceBatch?(params: {
+    externalPostIds: string[]
+    dateRange: { from: Date; to: Date }
+  }): Promise<Map<string, Omit<PerformanceSnapshot, 'id' | 'createdAt' | 'postId'>>>
 }
 
 export interface TrendDataPlugin {
