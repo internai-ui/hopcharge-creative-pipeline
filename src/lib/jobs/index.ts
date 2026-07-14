@@ -151,6 +151,11 @@ export async function getAutomationConfig(): Promise<AutomationState> {
 // Apply a config to pg-boss live: schedule enabled jobs, unschedule the rest.
 // Safe to call repeatedly; starts pg-boss on first use.
 export async function applyAutomation(state: AutomationState): Promise<void> {
+  // On Vercel there is no long-lived process to host pg-boss; Vercel Cron
+  // (/api/cron/*) drives the schedule instead. The caller (updateAutomation /
+  // initAutomation) has already persisted `state` to Postgres, and the cron
+  // endpoints read that, so /automation toggles still take effect here.
+  if (process.env.VERCEL) return
   const b = await ensureRegistered()
   for (const def of JOB_DEFS) {
     const shouldRun = state.masterEnabled && state.jobs[def.name]
@@ -236,6 +241,10 @@ export type JobView = ReturnType<typeof describeJobs>[number]
 // Called from src/instrumentation.ts at server startup. When the master switch
 // is off we don't even start pg-boss, so "off" truly means nothing runs.
 export async function initAutomation(): Promise<void> {
+  if (process.env.VERCEL) {
+    console.log('[automation] Vercel runtime - pg-boss not started; jobs run via Vercel Cron (/api/cron/*)')
+    return
+  }
   const config = await getAutomationConfig()
   if (!config.masterEnabled) {
     console.log('[automation] master switch OFF - no jobs scheduled (toggle it in /automation)')

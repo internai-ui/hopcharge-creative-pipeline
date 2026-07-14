@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/trend-context", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/feedback-loop", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/sync-performance", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/reconcile-posts", "schedule": "0 17 * * *" }
+  ]
+}
