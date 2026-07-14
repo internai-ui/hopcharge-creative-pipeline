@@ -11,8 +11,8 @@ variable "project" {
 }
 
 # ── S3 ────────────────────────────────────────────────────────────────────────
-variable "s3_bucket_name" {
-  description = "Globally-unique S3 bucket name for generated creatives."
+variable "s3_bucket_prefix" {
+  description = "Prefix for the creatives bucket. A random suffix is appended so the final name is always globally unique (see the s3_bucket output)."
   type        = string
   default     = "hopcharge-creatives"
 }

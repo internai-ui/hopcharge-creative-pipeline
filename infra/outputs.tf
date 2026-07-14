@@ -38,3 +38,18 @@ output "prisma_db_push_command" {
   description = "Run from the repo root once, to create the tables on the new RDS instance."
   value       = "DATABASE_URL=\"$(terraform -chdir=infra output -raw database_url)\" npx prisma db push"
 }
+
+# One-shot: the complete env block to hand back / paste into Vercel.
+# Reveal with:  terraform output -raw env_for_vercel
+output "env_for_vercel" {
+  description = "Full env block to paste into Vercel (terraform output -raw env_for_vercel)"
+  sensitive   = true
+  value       = <<-EOT
+    STORAGE_TYPE=s3
+    AWS_S3_BUCKET=${aws_s3_bucket.creatives.bucket}
+    AWS_REGION=${var.aws_region}
+    AWS_ACCESS_KEY_ID=${aws_iam_access_key.app.id}
+    AWS_SECRET_ACCESS_KEY=${aws_iam_access_key.app.secret}
+    DATABASE_URL=postgresql://${var.db_username}:${random_password.db.result}@${aws_db_instance.this.address}:5432/${var.db_name}?sslmode=require
+  EOT
+}

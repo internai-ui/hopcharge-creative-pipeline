@@ -10,23 +10,66 @@ provider "aws" {
 }
 
 # ── Networking ────────────────────────────────────────────────────────────────
-# Reuse the account's default VPC + subnets (public, spread across AZs). This keeps
-# the setup a single `apply` with no custom VPC to manage, and its subnets already
-# have an internet gateway route so RDS can be publicly reachable from Vercel.
-data "aws_vpc" "default" {
-  default = true
+# A dedicated VPC + public subnets. We do NOT rely on a "default VPC" because
+# Organization-managed / security-baselined accounts often have none, which would
+# make this fail on `plan`. This makes the stack work in any account, first try.
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+locals {
+  az_count = min(3, length(data.aws_availability_zones.available.names))
+}
+
+resource "aws_vpc" "this" {
+  cidr_block           = "10.20.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = { Name = var.project }
+}
+
+resource "aws_internet_gateway" "this" {
+  vpc_id = aws_vpc.this.id
+  tags   = { Name = var.project }
+}
+
+resource "aws_subnet" "public" {
+  count                   = local.az_count
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = cidrsubnet(aws_vpc.this.cidr_block, 8, count.index)
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+
+  tags = { Name = "${var.project}-public-${count.index}" }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.this.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.this.id
   }
+
+  tags = { Name = "${var.project}-public" }
+}
+
+resource "aws_route_table_association" "public" {
+  count          = local.az_count
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
 }
 
 # ── S3: private bucket for generated creatives ────────────────────────────────
+# Random suffix guarantees the bucket name is globally unique (S3 names are global),
+# so `apply` never fails on a name collision. The real name is an output.
+resource "random_id" "bucket" {
+  byte_length = 4
+}
+
 resource "aws_s3_bucket" "creatives" {
-  bucket = var.s3_bucket_name
+  bucket = "${var.s3_bucket_prefix}-${random_id.bucket.hex}"
 }
 
 # Fully private — the app hands out short-lived presigned URLs, so nothing is public.
@@ -40,6 +83,7 @@ resource "aws_s3_bucket_public_access_block" "creatives" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "creatives" {
   bucket = aws_s3_bucket.creatives.id
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -50,6 +94,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "creatives" {
 resource "aws_s3_bucket_versioning" "creatives" {
   count  = var.s3_versioning ? 1 : 0
   bucket = aws_s3_bucket.creatives.id
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -96,13 +141,13 @@ resource "random_password" "db" {
 
 resource "aws_db_subnet_group" "this" {
   name       = "${var.project}-db"
-  subnet_ids = data.aws_subnets.default.ids
+  subnet_ids = aws_subnet.public[*].id
 }
 
 resource "aws_security_group" "db" {
   name        = "${var.project}-db"
   description = "Postgres access for ${var.project}"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = aws_vpc.this.id
 
   ingress {
     description = "PostgreSQL"

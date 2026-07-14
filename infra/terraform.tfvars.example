@@ -1,7 +1,7 @@
 # Copy to terraform.tfvars and adjust. terraform.tfvars is gitignored.
 
-aws_region     = "us-east-1"          # keep near Vercel's iad1 functions
-s3_bucket_name = "hopcharge-creatives" # must be GLOBALLY unique — change if taken
+aws_region       = "us-east-1"          # keep near Vercel's iad1 functions
+s3_bucket_prefix = "hopcharge-creatives" # a random suffix is appended for global uniqueness
 
 # db_instance_class = "db.t4g.micro"   # cheapest; bump for more headroom
 # postgres_version  = "16"

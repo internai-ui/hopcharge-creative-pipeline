@@ -48,3 +48,5 @@ next-env.d.ts
 *.tfstate.*
 *.tfplan
 infra/terraform.tfvars
+# not committed on purpose — init fetches per-OS binaries (works on any Mac/Linux/Windows)
+.terraform.lock.hcl

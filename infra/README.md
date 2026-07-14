@@ -1,66 +1,82 @@
 # infra — AWS provisioning (Terraform)
 
-Provisions the two pieces of AWS the app needs:
+Stands up everything the app needs on AWS, in **one `terraform apply`**, in a
+**dedicated VPC** (no reliance on a default VPC), in **us-east-1** by default (next
+to Vercel's `iad1` functions):
 
-- **S3 bucket** (private) for generated creatives, plus an **IAM user** with read/write access to just that bucket (its access key/secret are outputs).
-- **RDS PostgreSQL** instance (public, TLS) with a generated password. The ready-to-use `DATABASE_URL` is an output.
+- **VPC + public subnets + internet gateway** (self-contained networking).
+- **S3 bucket** (private) for generated creatives + an **IAM user** scoped to just
+  that bucket. Bucket name gets a random suffix so it's always globally unique.
+- **RDS PostgreSQL** (public, TLS) with a generated 32-char password.
 
-Everything lands in your account's **default VPC** (no custom networking), in **us-east-1** by default so the database sits next to Vercel's `iad1` functions.
+> This is meant to be run by whoever holds AWS credentials. It needs **no input** —
+> just `init` then `apply`. When it finishes, send back the one `env_for_vercel`
+> block (last section) and you're done.
 
-## Prerequisites
+## Prerequisites (for whoever runs it)
 
-- [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.5
-- AWS credentials with permission to create S3/IAM/RDS/EC2-SG resources, e.g.:
-  ```bash
-  export AWS_ACCESS_KEY_ID=...
-  export AWS_SECRET_ACCESS_KEY=...
-  # or: aws configure
-  ```
+- [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.5 (tested on 1.9).
+- AWS credentials in the shell (`aws configure`, or `AWS_ACCESS_KEY_ID` /
+  `AWS_SECRET_ACCESS_KEY` env vars) for an identity allowed to create: **VPC,
+  subnets, internet gateway, route tables, security groups, S3, IAM user/policy/
+  access key, and RDS**. An account admin has all of these.
+- Nothing else — no variables need to be set (defaults are sensible).
 
-## Deploy
+## Run it
 
 ```bash
 cd infra
-cp terraform.tfvars.example terraform.tfvars   # edit s3_bucket_name to something globally unique
 terraform init
-terraform plan       # review
-terraform apply      # type "yes" (RDS takes ~5–10 min to come up)
+terraform apply     # review the plan, type "yes". RDS takes ~5–10 min to create.
 ```
 
-## Wire it into Vercel
+That's the whole deployment. There is nothing to configure first.
 
-After `apply`, read the outputs and set these in **Vercel → Settings → Environment Variables** (Production + Preview):
+## Send this back
+
+After `apply` completes, run:
 
 ```bash
-terraform output s3_bucket                    # → AWS_S3_BUCKET
-terraform output aws_region                   # → AWS_REGION
-terraform output aws_access_key_id            # → AWS_ACCESS_KEY_ID
-terraform output -raw aws_secret_access_key   # → AWS_SECRET_ACCESS_KEY   (sensitive)
-terraform output -raw database_url            # → DATABASE_URL            (sensitive)
+terraform output -raw env_for_vercel
 ```
 
-Also set `STORAGE_TYPE=s3` and leave **`AWS_S3_ENDPOINT` unset** (that var is only for R2/MinIO; real S3 needs no endpoint).
+It prints a ready-to-paste block like:
 
-## Create the database schema
+```
+STORAGE_TYPE=s3
+AWS_S3_BUCKET=hopcharge-creatives-1a2b3c4d
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+DATABASE_URL=postgresql://hopcharge:...@...rds.amazonaws.com:5432/hopcharge?sslmode=require
+```
 
-The DB comes up empty. From the **repo root**, create the tables once (this project uses `db push`, not migrations):
+Send that block back — those six values are everything the app needs. (They also go
+straight into **Vercel → Settings → Environment Variables**.)
+
+## One more step after the env vars are set
+
+The database comes up empty. Create the tables once (from the repo root, with the
+`DATABASE_URL` above). This can be done by whoever has the URL:
 
 ```bash
-DATABASE_URL="$(terraform -chdir=infra output -raw database_url)" npx prisma db push
-# optional seed data:
-DATABASE_URL="$(terraform -chdir=infra output -raw database_url)" npm run db:seed
+DATABASE_URL="postgresql://hopcharge:...@...:5432/hopcharge?sslmode=require" npx prisma db push
 ```
 
-## Notes & costs
+## Notes
 
-- **Security:** the DB is publicly reachable because Vercel Hobby has no static egress IPs to allow-list. It's protected by a 32-char random password and `sslmode=require`. Narrow `db_allowed_cidrs` in `terraform.tfvars` if your clients have fixed IPs.
-- **Cost:** `db.t4g.micro` + 20 GB is free-tier-eligible for 12 months in most regions, ~$12–15/mo after. S3 is a few cents/GB.
-- **State:** `terraform.tfstate` holds the DB password and access key in plaintext — it's gitignored. For a team, move it to an S3 backend.
+- **Security:** the DB is publicly reachable because Vercel Hobby has no static
+  egress IPs to allow-list. It's protected by a 32-char random password + required
+  TLS (`sslmode=require`). To lock it down, set `db_allowed_cidrs` in a
+  `terraform.tfvars` before applying.
+- **Cost:** `db.t4g.micro` + 20 GB is free-tier-eligible for 12 months in most
+  regions, ~$12–15/mo after. S3 is a few cents per GB. The VPC/IGW/subnets are free.
+- **State:** `terraform.tfstate` holds the DB password + access key in plaintext —
+  it's gitignored. For a team, move state to an S3 backend.
+- **Tear down:** `terraform destroy` (with the default `db_skip_final_snapshot =
+  true` this deletes the DB with no backup — set it to `false` first to keep one).
 
-## Tear down
+## Variables
 
-```bash
-terraform destroy
-```
-
-With the defaults (`db_skip_final_snapshot = true`) this deletes the database **without a backup**. Set `db_skip_final_snapshot = false` first if you want a snapshot kept.
+All optional — see `variables.tf`. Common ones: `aws_region`, `s3_bucket_prefix`,
+`db_instance_class`, `db_allowed_cidrs`, `db_deletion_protection`.
