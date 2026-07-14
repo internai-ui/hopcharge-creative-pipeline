@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars and adjust. terraform.tfvars is gitignored.
+
+aws_region     = "us-east-1"          # keep near Vercel's iad1 functions
+s3_bucket_name = "hopcharge-creatives" # must be GLOBALLY unique — change if taken
+
+# db_instance_class = "db.t4g.micro"   # cheapest; bump for more headroom
+# postgres_version  = "16"
+
+# Vercel Hobby has no static egress IPs, so this defaults to open (protected by the
+# generated 32-char password + required TLS). Narrow it if your clients have fixed IPs.
+# db_allowed_cidrs = ["0.0.0.0/0"]
+
+# Safer for real data (keeps a final snapshot on destroy, blocks accidental deletes):
+# db_skip_final_snapshot = false
+# db_deletion_protection = true
