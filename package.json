@@ -33,14 +33,15 @@
     "@prisma/client": "^7.8.0",
     "@tanstack/react-virtual": "^3.14.2",
     "google-trends-api": "^4.9.2",
+    "jose": "^6.2.3",
     "next": "16.2.6",
     "pg": "^8.21.0",
     "pg-boss": "^12.18.2",
     "prisma": "^7.8.0",
     "react": "19.2.4",
-    "sharp": "^0.34.5",
     "react-dom": "19.2.4",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
