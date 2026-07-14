@@ -2,7 +2,7 @@
 
 An internal automated marketing pipeline for Hopcharge. It orchestrates the full lifecycle of an ad creative - AI-generated idea matrices → image/video generation → human review → publishing to Meta → performance analytics → feeding winning patterns back into idea generation - continuously and on schedule.
 
-> Built on **Next.js 16** (App Router) + **React 19**, **Prisma 7** / PostgreSQL, **pg-boss** for scheduled jobs, **Playwright** for browser-automation generators, and S3-compatible object storage (MinIO in dev, R2/S3 in prod). All performance metrics are in **₹ (INR)** and the engine optimises for **CPL** (cost-per-lead, lower is better).
+> Built on **Next.js 16** (App Router) + **React 19**, **Prisma 7** / PostgreSQL, **pg-boss** for scheduled jobs, and S3-compatible object storage (MinIO in dev, R2/S3 in prod). All performance metrics are in **₹ (INR)** and the engine optimises for **CPL** (cost-per-lead, lower is better).
 
 > **Note for contributors:** This repo pins Next.js 16, which has breaking changes vs. older versions. Read the relevant guide in `node_modules/next/dist/docs/` before writing framework code (see `AGENTS.md`).
 
@@ -81,9 +81,6 @@ To go to production, leave the code untouched and point the `AWS_*` env vars at 
 | `npm run meta:setup` | Verify Meta credentials / ad account |
 | `npm run classify-funnel` | Backfill `funnelStage` on existing ideas |
 | `npm run backfill-ad-copy` | Backfill `primaryText` / `headline` ad copy |
-| `npm run browser:setup:<vendor>` | Launch a real browser to capture a login session for a browser-automation generator (`kling`, `veo`, `runway`, `flux`, `flyne`) |
-
-> The `browser:setup:*` scripts and `browser-*` generators use Playwright's Chromium, which is **not** installed by `npm install`. Run `npx playwright install chromium` once before using them. (Not needed for default `stub` mode.)
 
 ---
 
@@ -223,8 +220,8 @@ Every external vendor sits behind a typed interface in `src/lib/plugins/interfac
 | Slot | Env var | Options |
 |---|---|---|
 | Idea generator | `IDEA_GENERATOR` | `claude`, `stub` |
-| Video generator | `VIDEO_GENERATOR` | `higgsfield`, `kling`, `runway`, `browser-kling`, `browser-veo`, `browser-runway`, `stub` |
-| Image generator | `IMAGE_GENERATOR` | `higgsfield`, `replicate`, `browser-flux`, `browser-flyne`, `stub` |
+| Video generator | `VIDEO_GENERATOR` | `higgsfield`, `kling`, `runway`, `stub` |
+| Image generator | `IMAGE_GENERATOR` | `higgsfield`, `replicate`, `stub` |
 | Meta publisher | `PUBLISHER_META` | `meta`, `stub` |
 | Meta analytics | `ANALYTICS_META` | `meta`, `stub` |
 | Trend data | `TREND_DATA` | `google`, `stub` |
@@ -232,8 +229,6 @@ Every external vendor sits behind a typed interface in `src/lib/plugins/interfac
 | Ad library | `AD_LIBRARY` | `meta`, `stub` |
 
 > **Higgsfield is credit-gated.** `HIGGSFIELD_ALLOW_GENERATION` must be `true` to actually spend credits - keep it off unless you intend to.
-
-The `browser-*` generators drive a real vendor web UI with Playwright instead of an API. Capture a login session first with `npm run browser:setup:<vendor>` (sessions are stored in `.browser-session-*.json`).
 
 ### Switching from stub to real mode
 
@@ -316,7 +311,6 @@ src/
   lib/
     jobs/             # pg-boss jobs (poll, sync, trend-context, feedback-loop, reconcile)
     plugins/          # vendor adapters behind typed interfaces + registry
-      browser/        # Playwright-driven generators (kling, veo, runway, flux, flyne)
       claude/ meta/ google-trends/ higgsfield/ kling/ runway/ replicate/ stubs/
     storage.ts        # S3/local storage abstraction
     performance-context.ts, trend-topics.ts, meta-historical.ts, ...

@@ -28,11 +28,6 @@ import { HiggsfieldGenerator, HiggsfieldImageGenerator } from './higgsfield'
 import { KlingGenerator } from './kling'
 import { RunwayGenerator } from './runway'
 import { ReplicateFluxGenerator } from './replicate'
-import { KlingBrowserGenerator } from './browser/kling'
-import { VeoBrowserGenerator } from './browser/veo'
-import { RunwayBrowserGenerator } from './browser/runway'
-import { FluxBrowserGenerator } from './browser/flux'
-import { FlyneBrowserGenerator } from './browser/flyne'
 
 function env(key: string, fallback = 'stub'): string {
   return process.env[key] ?? fallback
@@ -50,9 +45,6 @@ export function getVideoGenerator(): VideoGeneratorPlugin {
     case 'higgsfield':   return new HiggsfieldGenerator()
     case 'kling':        return new KlingGenerator()
     case 'runway':       return new RunwayGenerator()
-    case 'browser-kling':   return new KlingBrowserGenerator()
-    case 'browser-veo':     return new VeoBrowserGenerator()
-    case 'browser-runway':  return new RunwayBrowserGenerator()
     default:             return new VideoGeneratorStub()
   }
 }
@@ -61,8 +53,6 @@ export function getImageGenerator(): ImageGeneratorPlugin {
   switch (env('IMAGE_GENERATOR')) {
     case 'higgsfield':   return new HiggsfieldImageGenerator()
     case 'replicate':    return new ReplicateFluxGenerator()
-    case 'browser-flux':  return new FluxBrowserGenerator()
-    case 'browser-flyne': return new FlyneBrowserGenerator()
     default:              return new ImageGeneratorStub()
   }
 }

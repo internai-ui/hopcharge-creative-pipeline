@@ -49,24 +49,17 @@ export async function POST(req: NextRequest) {
     // Image2video generators need an OPENING FRAME, not the finished image ad. Render a
     // dedicated first frame from the idea's videoFirstFrame prompt (Sara-locked via the
     // image generator) so each video is dynamically generated yet character-consistent.
-    // Higgsfield's API and the browser UIs (Kling/Runway/Veo all support image-to-video)
-    // can all use it; text2video generators ignore it.
-    const IMG2VIDEO = new Set(['higgsfield', 'browser-kling', 'browser-runway', 'browser-veo'])
+    // Higgsfield's image2video uses it; text2video generators ignore it.
+    const IMG2VIDEO = new Set(['higgsfield'])
     let referenceAssets: string[] | undefined
     if (IMG2VIDEO.has(generator.name)) {
       const framePrompt = buildImagePrompt(
         idea.videoFirstFrame?.trim() || deriveFirstFrameVisual(idea.videoVisual),
         { angle: idea.angle }
       )
-      try {
-        const frame = await getImageGenerator().generate({ prompt: framePrompt })
-        if (frame.fileUrl) referenceAssets = [frame.fileUrl]
-      } catch (err) {
-        // Higgsfield image2video REQUIRES a frame, so surface the failure there. The
-        // browser generators degrade gracefully to text-to-video, so just log.
-        if (generator.name === 'higgsfield') throw err
-        console.warn(`[creatives] first-frame render failed for ${generator.name}, falling back to text-to-video:`, err)
-      }
+      // Higgsfield image2video REQUIRES a frame, so a failure here is fatal.
+      const frame = await getImageGenerator().generate({ prompt: framePrompt })
+      if (frame.fileUrl) referenceAssets = [frame.fileUrl]
     }
 
     const { jobId } = await generator.submitJob({ idea, referenceAssets })

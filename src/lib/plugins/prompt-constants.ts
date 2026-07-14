@@ -46,7 +46,7 @@ export const VAN_B_FULL =
   'with no logo or lettering (brand marks added in post), rear double doors open, thick black charging cable ' +
   'running from the box to the customer\'s EV'
 
-/** Compact van description for browser prompts (character-budget ~120 chars) */
+/** Compact van description used as the concise vehicle anchor in built prompts (~120 chars) */
 export const VAN_A_BRIEF =
   'white Maruti Eeco cargo van, royal blue rear wrap, gold horizontal stripe, plain unlabelled panels (no logo or lettering), thick charging cable to EV'
 
@@ -95,7 +95,7 @@ export const NEGATIVE_VIDEO =
   'AI glitch artefacts, morphing faces, flickering textures'
 
 // NEGATIVE_IMAGE is only meaningful for models that expose a real (CFG) negative
-// prompt field. The Flux family (Replicate Flux, browser Flux/Flyne) has none - a
+// prompt field. Replicate Flux has none - a
 // negative list there is a no-op at best and can pull the named concepts INTO frame
 // at worst. For those, use IMAGE_POSITIVE_GUARDRAILS (below) instead, which states
 // the same intent positively. NEGATIVE_IMAGE is wired into Higgsfield Soul, whose
@@ -134,7 +134,7 @@ export const IMAGE_QUALITY =
 // ── Builder functions ─────────────────────────────────────────────────────────
 
 interface BuildVideoOptions {
-  /** Use compact descriptions to stay within browser character budgets (~800 chars) */
+  /** Use compact descriptions (concise prompt variant) */
   brief?: boolean
   /** Which van design to feature */
   van?: 'A' | 'B'

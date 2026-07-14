@@ -4,20 +4,8 @@ import { storage } from '@/lib/storage'
 import { buildImagePrompt } from '@/lib/plugins/prompt-constants'
 import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
 import { NextRequest } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 
 async function readImageBuffer(fileUrl: string): Promise<{ buffer: Buffer; ext: string }> {
-  // Browser-based generators save to local storage and return a relative path like
-  // /api/browser-images/flux-xxx.webp - read from disk instead of fetching via HTTP
-  if (fileUrl.startsWith('/api/browser-images/')) {
-    const filename = fileUrl.replace('/api/browser-images/', '')
-    const localPath = path.join(process.cwd(), 'storage', 'browser-images', filename)
-    if (!fs.existsSync(localPath)) throw new Error(`Browser image not found at ${localPath}`)
-    const ext = filename.split('.').pop() ?? 'jpg'
-    return { buffer: fs.readFileSync(localPath), ext }
-  }
-
   // API-based generators (Replicate, etc.) return a full https:// CDN URL
   const response = await fetch(fileUrl)
   if (!response.ok) throw new Error(`Failed to download image: ${response.status} ${fileUrl}`)
@@ -81,7 +69,7 @@ export async function POST(req: NextRequest) {
       return Response.json([creative], { status: 201 })
     }
 
-    // Synchronous path (Replicate / browser / stub): blocks until the image returns.
+    // Synchronous path (Replicate / stub): blocks until the image returns.
     const { fileUrl, fileUrls } = await generator.generate({ prompt })
 
     // Use all image URLs if available (e.g. ElevenLabs returns 4), otherwise just the one
