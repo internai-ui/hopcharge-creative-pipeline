@@ -314,7 +314,10 @@ export async function fetchAdTimingBreakdowns(
   hourlyUrl.searchParams.set('access_token', token)
 
   const hourlyRes = await fetch(hourlyUrl.toString())
-  const hourlyData = await hourlyRes.json() as { data?: Record<string, unknown>[] }
+  const hourlyData = await hourlyRes.json() as { data?: Record<string, unknown>[]; error?: { message: string } }
+  // A Meta error (bad token, expired session, etc.) has no `data` field — without this
+  // check we'd silently return all-zero breakdowns and store them as if valid.
+  if (hourlyData.error) throw new Error(`Meta timing (hourly) failed for ${adId}: ${hourlyData.error.message}`)
 
   const hourly: HourlyRow[] = Array.from({ length: 24 }, (_, i) => ({
     hour: i, impressions: 0, spend: 0, leads: 0, cpl: 0,
@@ -343,7 +346,8 @@ export async function fetchAdTimingBreakdowns(
   dailyUrl.searchParams.set('limit', '180')
 
   const dailyRes = await fetch(dailyUrl.toString())
-  const dailyData = await dailyRes.json() as { data?: Record<string, unknown>[] }
+  const dailyData = await dailyRes.json() as { data?: Record<string, unknown>[]; error?: { message: string } }
+  if (dailyData.error) throw new Error(`Meta timing (daily) failed for ${adId}: ${dailyData.error.message}`)
 
   const weekdayAcc = Array.from({ length: 7 }, (_, d) => ({
     day: d, impressions: 0, spend: 0, leads: 0, cplSum: 0, count: 0,
@@ -374,7 +378,7 @@ export async function fetchAdTimingBreakdowns(
   return { hourly, weekday }
 }
 
-export async function syncTimingBreakdowns(): Promise<{ updated: number; errors: number }> {
+export async function syncTimingBreakdowns(): Promise<{ updated: number; errors: number; lastError?: string }> {
   const token = process.env.META_ACCESS_TOKEN
   if (!token) throw new Error('META_ACCESS_TOKEN must be set')
 
@@ -386,6 +390,7 @@ export async function syncTimingBreakdowns(): Promise<{ updated: number; errors:
   // fast enough to finish in seconds without tripping Meta's rate limits.
   const CONCURRENCY = 6
   let updated = 0, errors = 0
+  let lastError = ''
   for (let i = 0; i < ads.length; i += CONCURRENCY) {
     const batch = ads.slice(i, i + CONCURRENCY)
     const results = await Promise.all(
@@ -396,24 +401,29 @@ export async function syncTimingBreakdowns(): Promise<{ updated: number; errors:
             where: { id: ad.id },
             data: { hourlyBreakdown: hourly, weekdayBreakdown: weekday },
           })
-          return true
-        } catch {
-          return false
+          return { ok: true as const }
+        } catch (err) {
+          return { ok: false as const, message: String(err) }
         }
       })
     )
-    for (const ok of results) { if (ok) updated++; else errors++ }
+    for (const r of results) {
+      if (r.ok) updated++
+      else { errors++; if (!lastError) lastError = r.message }
+    }
   }
 
   if (errors > 0) {
     await logPipelineIssue({
       severity: errors > 5 ? 'warning' : 'info',
       stage: 'analytics',
-      description: `Timing sync completed: ${updated} ads updated, ${errors} errors.`,
+      // Surface the actual Meta error (e.g. an invalid token) instead of a bare count,
+      // so an all-failed sync is diagnosable rather than silently writing zeros.
+      description: `Timing sync: ${updated} ads updated, ${errors} errors.${lastError ? ` Last error: ${lastError}` : ''}`,
     })
   }
 
-  return { updated, errors }
+  return { updated, errors, lastError: lastError || undefined }
 }
 
 async function extractConcepts(params: {
