@@ -6,7 +6,8 @@ import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { ideaId, generator: generatorOverride, regenerate } = await req.json()
+    const { ideaId, generator: generatorOverride, regenerate, platform } = await req.json()
+    const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
 
     const idea = await prisma.idea.findUnique({ where: { id: ideaId } })
     if (!idea) return Response.json({ error: 'Idea not found' }, { status: 404 })
@@ -62,14 +63,30 @@ export async function POST(req: NextRequest) {
       if (frame.fileUrl) referenceAssets = [frame.fileUrl]
     }
 
-    const { jobId } = await generator.submitJob({ idea, referenceAssets })
+    const { jobId } = await generator.submitJob({ idea, referenceAssets, aspectRatio: '9:16' })
+
+    // YouTube "both": also render a 16:9 in-stream rendition alongside the 9:16
+    // Shorts video; both ship as assets in one Demand Gen responsive ad. Best-effort
+    // — if the landscape submit fails we still publish the Shorts version.
+    let landscapeJobId: string | undefined
+    if (targetPlatform === 'youtube') {
+      try {
+        const land = await generator.submitJob({ idea, referenceAssets, aspectRatio: '16:9' })
+        landscapeJobId = land.jobId
+      } catch (err) {
+        console.warn('[creatives] 16:9 landscape submit failed, continuing Shorts-only:', err)
+      }
+    }
 
     const creative = await prisma.creative.create({
       data: {
         ideaId,
+        platform: targetPlatform,
+        aspectRatio: '9:16',
         status: 'generating',
         generatorName: generatorOverride ?? generator.name,
         generatorJobId: jobId,
+        ...(landscapeJobId ? { metadata: { landscapeJobId } } : {}),
       },
     })
 

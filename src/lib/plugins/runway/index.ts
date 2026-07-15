@@ -30,7 +30,9 @@ export class RunwayGenerator implements VideoGeneratorPlugin {
     }
   }
 
-  async submitJob({ idea }: { idea: Idea; referenceAssets?: string[] }): Promise<{ jobId: string }> {
+  async submitJob({ idea, aspectRatio }: { idea: Idea; referenceAssets?: string[]; aspectRatio?: '9:16' | '16:9' }): Promise<{ jobId: string }> {
+    // 9:16 (default) → vertical Reels/Shorts; 16:9 → YouTube in-stream landscape.
+    const ratio = aspectRatio === '16:9' ? '1920:1080' : (process.env.RUNWAY_RATIO ?? '1080:1920')
     const res = await fetch(`${BASE}/text_to_video`, {
       method: 'POST',
       headers: this.headers(),
@@ -38,7 +40,7 @@ export class RunwayGenerator implements VideoGeneratorPlugin {
         model: process.env.RUNWAY_MODEL ?? 'veo3.1_fast',
         promptText: buildPrompt(idea),
         duration: Number(process.env.RUNWAY_DURATION ?? '8'),
-        ratio: process.env.RUNWAY_RATIO ?? '1080:1920',
+        ratio,
         watermark: false,
       }),
     })

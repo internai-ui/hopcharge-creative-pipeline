@@ -80,6 +80,10 @@ export interface VideoGeneratorPlugin {
   submitJob(params: {
     idea: Idea
     referenceAssets?: string[]
+    // Target aspect ratio. Meta + YouTube Shorts use 9:16 (default); YouTube "both"
+    // mode also renders a 16:9 in-stream rendition. Generators that don't support a
+    // ratio param ignore it and use their configured default.
+    aspectRatio?: '9:16' | '16:9'
   }): Promise<{ jobId: string }>
   pollJobStatus(jobId: string): Promise<{
     status: 'pending' | 'processing' | 'complete' | 'failed'

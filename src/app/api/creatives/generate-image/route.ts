@@ -16,7 +16,8 @@ async function readImageBuffer(fileUrl: string): Promise<{ buffer: Buffer; ext: 
 
 export async function POST(req: NextRequest) {
   try {
-    const { ideaId, regenerate } = await req.json()
+    const { ideaId, regenerate, platform } = await req.json()
+    const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
 
     const idea = await prisma.idea.findUnique({ where: { id: ideaId } })
     if (!idea) return Response.json({ error: 'Idea not found' }, { status: 404 })
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
       const creative = await prisma.creative.create({
         data: {
           ideaId,
+          platform: targetPlatform,
+          aspectRatio: '9:16',
           mediaType: 'image',
           status: 'generating',
           generatorName: generator.name,
@@ -84,6 +87,8 @@ export async function POST(req: NextRequest) {
       const creative = await prisma.creative.create({
         data: {
           ideaId,
+          platform: targetPlatform,
+          aspectRatio: '9:16',
           mediaType: 'image',
           status: 'ready_for_review',
           generatorName: generator.name,
