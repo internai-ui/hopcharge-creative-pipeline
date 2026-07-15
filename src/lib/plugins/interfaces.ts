@@ -115,12 +115,20 @@ export interface PublisherPlugin {
   platform: 'meta' | 'youtube'
   publish(params: {
     creative: Creative
-    caption?: string        // ad primary text (body)
-    headline?: string       // ad headline (bold line under the creative)
-    funnelStage?: 'TOF' | 'MOF' | 'BOF' | null  // drives optimization goal
+    caption?: string        // Meta primary text (body)
+    headline?: string       // Meta headline (bold line under the creative)
+    funnelStage?: 'TOF' | 'MOF' | 'BOF' | null  // drives optimization goal / ad group
     scheduledAt?: Date
     adSchedule?: AdSchedule
     targetingOptions?: Record<string, unknown>
+    // YouTube (Demand Gen) responsive copy. Several short headlines (<=40) and
+    // descriptions (<=90) that Google mixes; the CTA is an enum. Ignored by Meta.
+    ytHeadlines?: string[]
+    ytDescriptions?: string[]
+    ytCallToAction?: string
+    // Per-publish draft override. When set, wins over the platform's *_DRAFT_MODE
+    // env: true = create the ad PAUSED (draft), false = create it live.
+    draft?: boolean
   }): Promise<{ externalPostId: string; isDraft?: boolean }>
   pause(externalPostId: string): Promise<void>
   scale(externalPostId: string, budgetMultiplier: number): Promise<void>

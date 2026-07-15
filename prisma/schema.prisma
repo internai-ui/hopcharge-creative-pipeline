@@ -25,6 +25,13 @@ model Idea {
   // manual drawer and generators always supply them (backfilled for old rows).
   primaryText      String
   headline         String
+  // YouTube (Demand Gen) ad copy. Responsive: several short headlines (<=40 chars)
+  // and descriptions (<=90 chars) that Google mixes at serve time, plus a CTA enum.
+  // Distinct from Meta's single primaryText+headline (Demand Gen has no free-form
+  // body and no WhatsApp CTA). Backfilled by the idea generator; empty = not yet set.
+  ytHeadlines      String[]  @default([])
+  ytDescriptions   String[]  @default([])
+  ytCallToAction   String    @default("LEARN_MORE")
   angle            String
   rank             Int       @default(0)
   status           IdeaStatus @default(pending)
@@ -54,6 +61,13 @@ model Creative {
   idea             Idea            @relation(fields: [ideaId], references: [id])
   status           CreativeStatus  @default(generating)
   mediaType        String          @default("video")
+  // Platform this creative is built for (chosen at generation) + its aspect ratio.
+  // Meta = 9:16 (Reels). YouTube = 9:16 Shorts, and in "both" mode also renders a
+  // 16:9 in-stream rendition into landscapeFilePath that ships alongside the 9:16
+  // (originalFilePath) inside one Demand Gen responsive ad.
+  platform         Platform        @default(meta)
+  aspectRatio      String          @default("9:16")
+  landscapeFilePath String?
   generatorName    String
   generatorJobId   String?
   originalFilePath String?

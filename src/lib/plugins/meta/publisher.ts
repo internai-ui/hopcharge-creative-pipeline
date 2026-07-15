@@ -57,6 +57,7 @@ export class MetaPublisher implements PublisherPlugin {
     scheduledAt,
     adSchedule,
     targetingOptions,
+    draft,
   }: {
     creative: Creative
     caption?: string
@@ -65,13 +66,16 @@ export class MetaPublisher implements PublisherPlugin {
     scheduledAt?: Date
     adSchedule?: { days: number[]; startHour: number; endHour: number }
     targetingOptions?: Record<string, unknown>
+    draft?: boolean
   }): Promise<{ externalPostId: string; isDraft: boolean }> {
     const filePath = creative.editedFilePath ?? creative.originalFilePath
     if (!filePath) throw new Error('Creative has no file path')
 
-    // Draft mode → always PAUSED (saved, not delivered). Otherwise PAUSED for a
-    // future-scheduled post, ACTIVE to go live now.
-    const status: 'PAUSED' | 'ACTIVE' = this.draftMode ? 'PAUSED' : (scheduledAt ? 'PAUSED' : 'ACTIVE')
+    // Per-publish draft override wins over META_DRAFT_MODE. Draft → always PAUSED
+    // (saved, not delivered); otherwise PAUSED for a future-scheduled post, ACTIVE
+    // to go live now.
+    const isDraft = draft ?? this.draftMode
+    const status: 'PAUSED' | 'ACTIVE' = isDraft ? 'PAUSED' : (scheduledAt ? 'PAUSED' : 'ACTIVE')
 
     const adSetId = await this.createAdSet(creative.id, funnelStage, status, scheduledAt, targetingOptions, adSchedule)
 
@@ -88,7 +92,7 @@ export class MetaPublisher implements PublisherPlugin {
 
     const adId = await this.createAd(creative.id, adSetId, adCreativeId, status)
 
-    return { externalPostId: adId, isDraft: this.draftMode }
+    return { externalPostId: adId, isDraft }
   }
 
   private async uploadVideo(filePath: string, name: string): Promise<string> {

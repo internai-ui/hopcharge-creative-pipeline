@@ -3,8 +3,12 @@ import { getPublisher } from '@/lib/plugins/registry'
 import { logPipelineIssue } from '@/lib/pipeline-issues'
 import { NextRequest } from 'next/server'
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Per-publish draft/production toggle from the Publish modal; undefined = use the
+  // platform's *_DRAFT_MODE env default.
+  const body = await req.json().catch(() => ({}))
+  const draft = typeof body?.draft === 'boolean' ? body.draft : undefined
   try {
     const post = await prisma.post.findUnique({
       where: { id },
@@ -23,6 +27,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       funnelStage: idea.funnelStage ?? undefined,
       scheduledAt: post.scheduledAt ?? undefined,
       adSchedule: adSchedule ?? undefined,
+      ytHeadlines: idea.ytHeadlines,
+      ytDescriptions: idea.ytDescriptions,
+      ytCallToAction: idea.ytCallToAction,
+      draft,
     })
 
     const existingMeta = (post.platformMetadata as Record<string, unknown> | null) ?? {}

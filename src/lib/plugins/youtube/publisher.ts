@@ -1,4 +1,3 @@
-import path from 'path'
 import type { PublisherPlugin } from '../interfaces'
 import type { Creative } from '@prisma/client'
 import { storage } from '@/lib/storage'
@@ -6,28 +5,44 @@ import { storage } from '@/lib/storage'
 // ── YouTube publisher (Google Ads Demand Gen) ────────────────────────────────
 //
 // The Meta equivalent of a YouTube *ad* is a Google Ads Demand Gen video ad, and
-// the equivalent of Meta's PAUSED draft is `status: PAUSED` on the ad. YouTube ads
-// must reference a YouTube-hosted video, so the flow is:
+// the equivalent of Meta's PAUSED draft is a PAUSED ad. YouTube ads must reference
+// YouTube-hosted videos, so the flow is:
 //
 //   1. OAuth2: exchange the refresh token for an access token (scope: adwords).
-//   2. Upload the creative to YouTube via the Google Ads resumable upload service
-//      as an UNLISTED video → returns a YouTube video id.
-//   3. Create a YoutubeVideoAsset referencing that video id (assets:mutate).
-//   4. Create a PAUSED DemandGenVideoAd in a pre-configured Demand Gen ad group
-//      (adGroupAds:mutate) — the "draft".
+//   2. Upload each creative video to YouTube (UNLISTED) → YouTube video id.
+//   3. Wrap each as a YoutubeVideoAsset (assets:mutate).
+//   4. Create a PAUSED DemandGenVideoResponsiveAd (adGroupAds:mutate) with the
+//      video(s) + a required logo asset + business name + several headlines /
+//      descriptions + a CTA — the "draft".
 //
-// Like MetaPublisher, this reuses a campaign/ad group the operator sets up once in
-// the Google Ads UI (targeting/bidding live there), so publishing just adds the ad.
-// Your creatives are 9:16 / 1080×1920 — exactly the YouTube Shorts spec — so no
-// transcoding is needed; Demand Gen serves them on Shorts.
+// Feature parity with MetaPublisher:
+//   • funnel stage → ad group. Meta maps funnel to an optimization goal + campaign;
+//     Demand Gen keeps audience/bidding on the campaign+ad group, so we select a
+//     per-funnel ad group (GOOGLE_ADS_AD_GROUP_ID_{TOF,MOF,BOF}, fallback the
+//     default) — the operator sets those up once with the right audience signals,
+//     exactly like META_CAMPAIGN_ID_REACH / _CONVERSATIONS.
+//   • responsive copy: multiple ytHeadlines (<=40) + ytDescriptions (<=90) + CTA.
+//   • "both" aspect ratios: portrait (9:16, originalFilePath) + optional landscape
+//     (16:9, landscapeFilePath) ship as two video assets in ONE responsive ad;
+//     Google serves the right one per placement (Shorts vs in-stream).
+//   • per-publish draft override (draft arg) beats YOUTUBE_DRAFT_MODE.
 //
-// Requires (see .env.example): GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CLIENT_ID,
-// GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_REFRESH_TOKEN, GOOGLE_ADS_CUSTOMER_ID,
-// GOOGLE_ADS_AD_GROUP_ID (+ optional GOOGLE_ADS_LOGIN_CUSTOMER_ID, YOUTUBE_CHANNEL_ID).
+// Requires (see .env.example): the GOOGLE_ADS_* credentials, a per-funnel (or single)
+// Demand Gen ad group, and GOOGLE_ADS_LOGO_ASSET_ID (a 1:1 logo image asset the
+// operator uploads once — Demand Gen requires a logo, and it must be a raster 1:1,
+// not the app's SVG).
 
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const API = 'https://googleads.googleapis.com'
 const UPLOAD_API = 'https://googleads.googleapis.com/resumable/upload'
+
+type Copy = {
+  caption?: string
+  headline?: string
+  ytHeadlines?: string[]
+  ytDescriptions?: string[]
+  ytCallToAction?: string
+}
 
 export class YouTubePublisher implements PublisherPlugin {
   name = 'youtube'
@@ -37,48 +52,70 @@ export class YouTubePublisher implements PublisherPlugin {
   private clientId = process.env.GOOGLE_ADS_CLIENT_ID!
   private clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET!
   private refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN!
-  // Digits only, no dashes.
   private customerId = (process.env.GOOGLE_ADS_CUSTOMER_ID ?? '').replace(/-/g, '')
   private loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID?.replace(/-/g, '')
-  private adGroupId = process.env.GOOGLE_ADS_AD_GROUP_ID!
+  private defaultAdGroupId = process.env.GOOGLE_ADS_AD_GROUP_ID!
+  private logoAssetId = process.env.GOOGLE_ADS_LOGO_ASSET_ID
   private channelId = process.env.YOUTUBE_CHANNEL_ID
   private apiVersion = process.env.GOOGLE_ADS_API_VERSION ?? 'v18'
   private finalUrl = process.env.YOUTUBE_FINAL_URL ?? process.env.META_WEBSITE_URL ?? 'https://hopcharge.com'
   private businessName = process.env.YOUTUBE_BUSINESS_NAME ?? 'Hopcharge'
-  // Draft mode (default ON while testing): the ad is created PAUSED, so publishing
-  // saves a draft in Google Ads without spending or serving — same as Meta.
   private draftMode = (process.env.YOUTUBE_DRAFT_MODE ?? 'true') !== 'false'
 
   async publish({
     creative,
     caption,
     headline,
+    funnelStage,
+    ytHeadlines,
+    ytDescriptions,
+    ytCallToAction,
+    draft,
   }: {
     creative: Creative
     caption?: string
     headline?: string
     funnelStage?: 'TOF' | 'MOF' | 'BOF' | null
     scheduledAt?: Date
+    ytHeadlines?: string[]
+    ytDescriptions?: string[]
+    ytCallToAction?: string
+    draft?: boolean
   }): Promise<{ externalPostId: string; isDraft: boolean }> {
-    const filePath = creative.editedFilePath ?? creative.originalFilePath
-    if (!filePath) throw new Error('Creative has no file path')
+    const portraitPath = creative.editedFilePath ?? creative.originalFilePath
+    if (!portraitPath) throw new Error('Creative has no file path')
     if (creative.mediaType !== 'video') {
-      // Demand Gen also supports 9:16 image ads, but this pipeline's YouTube target
-      // is Shorts video. Keep the surface small and fail loudly on an image.
       throw new Error('YouTube publishing currently supports video creatives only')
     }
-
+    if (!this.logoAssetId) {
+      throw new Error('GOOGLE_ADS_LOGO_ASSET_ID is required (Demand Gen ads need a 1:1 logo image asset)')
+    }
+    const isDraft = draft ?? this.draftMode
     const token = await this.accessToken()
-    const buffer = await storage.read(filePath)
 
-    // 1. Upload to YouTube (unlisted) → video id.
-    const videoId = await this.uploadVideo(token, buffer, path.basename(filePath), creative.id, caption)
-    // 2. Wrap it as a YoutubeVideoAsset.
-    const assetResource = await this.createVideoAsset(token, videoId, creative.id)
-    // 3. Create the PAUSED Demand Gen ad.
-    const adResource = await this.createDemandGenAd(token, assetResource, caption, headline, creative.id)
+    // Upload portrait (9:16) and, in "both" mode, the landscape (16:9) rendition.
+    const videoAssets: string[] = []
+    const portraitId = await this.uploadVideo(token, await storage.read(portraitPath), `${creative.id}-9x16`, caption)
+    videoAssets.push(await this.createVideoAsset(token, portraitId, `${creative.id}-portrait`))
+    if (creative.landscapeFilePath) {
+      const landscapeId = await this.uploadVideo(
+        token,
+        await storage.read(creative.landscapeFilePath),
+        `${creative.id}-16x9`,
+        caption,
+      )
+      videoAssets.push(await this.createVideoAsset(token, landscapeId, `${creative.id}-landscape`))
+    }
 
-    return { externalPostId: adResource, isDraft: this.draftMode }
+    const adResource = await this.createDemandGenAd(
+      token,
+      videoAssets,
+      { caption, headline, ytHeadlines, ytDescriptions, ytCallToAction },
+      funnelStage,
+      isDraft,
+      creative.id,
+    )
+    return { externalPostId: adResource, isDraft }
   }
 
   // ── OAuth ───────────────────────────────────────────────────────────────────
@@ -106,15 +143,22 @@ export class YouTubePublisher implements PublisherPlugin {
     }
   }
 
+  // Funnel → ad group. The operator sets up one Demand Gen ad group per funnel stage
+  // (audience signals + bidding live there), mirroring Meta's per-funnel campaigns.
+  private adGroupResource(funnelStage: 'TOF' | 'MOF' | 'BOF' | null | undefined): string {
+    const byFunnel =
+      funnelStage === 'TOF'
+        ? process.env.GOOGLE_ADS_AD_GROUP_ID_TOF
+        : funnelStage === 'MOF'
+          ? process.env.GOOGLE_ADS_AD_GROUP_ID_MOF
+          : funnelStage === 'BOF'
+            ? process.env.GOOGLE_ADS_AD_GROUP_ID_BOF
+            : undefined
+    return `customers/${this.customerId}/adGroups/${byFunnel ?? this.defaultAdGroupId}`
+  }
+
   // ── Resumable YouTube upload (single-request finalize) ──────────────────────
-  private async uploadVideo(
-    token: string,
-    buffer: Buffer,
-    filename: string,
-    creativeId: string,
-    caption?: string,
-  ): Promise<string> {
-    // Initiate the resumable session and receive the upload URL.
+  private async uploadVideo(token: string, buffer: Buffer, label: string, caption?: string): Promise<string> {
     const init = await fetch(
       `${UPLOAD_API}/${this.apiVersion}/customers/${this.customerId}/youTubeVideoUploads:create`,
       {
@@ -130,7 +174,7 @@ export class YouTubePublisher implements PublisherPlugin {
         body: JSON.stringify({
           customerId: this.customerId,
           youTubeVideoUpload: {
-            videoTitle: `Hopcharge ${creativeId}`,
+            videoTitle: `Hopcharge ${label}`,
             videoDescription: caption ?? 'Hopcharge on-demand EV charging',
             videoPrivacy: 'UNLISTED',
             ...(this.channelId ? { channelId: this.channelId } : {}),
@@ -141,7 +185,6 @@ export class YouTubePublisher implements PublisherPlugin {
     const uploadUrl = init.headers.get('x-goog-upload-url')
     if (!uploadUrl) throw new Error(`YouTube upload init failed: ${init.status} ${await init.text()}`)
 
-    // Upload the bytes and finalize in one request.
     const put = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
@@ -152,8 +195,6 @@ export class YouTubePublisher implements PublisherPlugin {
       body: new Uint8Array(buffer),
     })
     const data = await put.json().catch(() => ({}))
-    // The finalize response carries the resulting video id (field name has varied
-    // across API versions, so accept the common shapes).
     const videoId: string | undefined =
       data?.youTubeVideoUpload?.videoId ?? data?.videoId ?? data?.resourceName?.split('/').pop()
     if (!videoId) throw new Error(`YouTube upload finalize returned no video id: ${JSON.stringify(data).slice(0, 300)}`)
@@ -161,19 +202,12 @@ export class YouTubePublisher implements PublisherPlugin {
   }
 
   // ── Video asset ─────────────────────────────────────────────────────────────
-  private async createVideoAsset(token: string, youTubeVideoId: string, creativeId: string): Promise<string> {
+  private async createVideoAsset(token: string, youTubeVideoId: string, name: string): Promise<string> {
     const res = await fetch(`${API}/${this.apiVersion}/customers/${this.customerId}/assets:mutate`, {
       method: 'POST',
       headers: { ...this.headers(token), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        operations: [
-          {
-            create: {
-              name: `Hopcharge YT ${creativeId}`,
-              youtubeVideoAsset: { youtubeVideoId: youTubeVideoId },
-            },
-          },
-        ],
+        operations: [{ create: { name: `Hopcharge YT ${name}`, youtubeVideoAsset: { youtubeVideoId: youTubeVideoId } } }],
       }),
     })
     const data = await res.json()
@@ -182,16 +216,23 @@ export class YouTubePublisher implements PublisherPlugin {
     return resource
   }
 
-  // ── Demand Gen video ad (PAUSED = draft) ────────────────────────────────────
+  // ── Demand Gen responsive video ad (PAUSED = draft) ─────────────────────────
   private async createDemandGenAd(
     token: string,
-    videoAssetResource: string,
-    caption: string | undefined,
-    headline: string | undefined,
+    videoAssetResources: string[],
+    copy: Copy,
+    funnelStage: 'TOF' | 'MOF' | 'BOF' | null | undefined,
+    isDraft: boolean,
     creativeId: string,
   ): Promise<string> {
-    const adGroup = `customers/${this.customerId}/adGroups/${this.adGroupId}`
-    const status = this.draftMode ? 'PAUSED' : 'ENABLED'
+    // Responsive: several short headlines/descriptions, else fall back to the
+    // Meta copy. Google requires at least one of each; caps and lengths enforced.
+    const headlineTexts = (copy.ytHeadlines?.length ? copy.ytHeadlines : [copy.headline ?? 'Charge your EV at home'])
+      .slice(0, 5)
+      .map((t) => ({ text: t.slice(0, 40) }))
+    const descriptionTexts = (copy.ytDescriptions?.length ? copy.ytDescriptions : [copy.caption ?? 'Hopcharge brings the charger to you.'])
+      .slice(0, 5)
+      .map((t) => ({ text: t.slice(0, 90) }))
 
     const res = await fetch(`${API}/${this.apiVersion}/customers/${this.customerId}/adGroupAds:mutate`, {
       method: 'POST',
@@ -200,17 +241,18 @@ export class YouTubePublisher implements PublisherPlugin {
         operations: [
           {
             create: {
-              adGroup,
-              status,
+              adGroup: this.adGroupResource(funnelStage),
+              status: isDraft ? 'PAUSED' : 'ENABLED',
               ad: {
                 name: `Hopcharge Ad ${creativeId}`,
                 finalUrls: [this.finalUrl],
                 demandGenVideoResponsiveAd: {
-                  videos: [{ asset: videoAssetResource }],
-                  headlines: [{ text: (headline ?? 'Charge your EV at home').slice(0, 40) }],
-                  descriptions: [{ text: (caption ?? 'Hopcharge brings the charger to you.').slice(0, 90) }],
+                  videos: videoAssetResources.map((asset) => ({ asset })),
+                  logoImages: [{ asset: this.logoAssetId }],
+                  headlines: headlineTexts,
+                  descriptions: descriptionTexts,
                   businessName: { text: this.businessName },
-                  callToActions: [{ text: 'LEARN_MORE' }],
+                  callToActions: [{ text: copy.ytCallToAction ?? 'LEARN_MORE' }],
                 },
               },
             },
@@ -236,8 +278,8 @@ export class YouTubePublisher implements PublisherPlugin {
     })
   }
 
-  // Budget lives on the Demand Gen campaign, not the ad — no-op here; adjust budget
-  // in the Google Ads UI. Kept for interface parity with Meta.
+  // Budget lives on the Demand Gen campaign, not the ad — adjust it in the Google
+  // Ads UI. Kept for interface parity with Meta.
   async scale(_externalPostId: string, _budgetMultiplier: number): Promise<void> {
     return
   }
