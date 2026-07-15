@@ -6,6 +6,7 @@ import { syncPerformance } from './sync-performance'
 import { runTrendContext } from './trend-context'
 import { runFeedbackLoop } from './feedback-loop'
 import { reconcilePosts } from './reconcile-posts'
+import { logPipelineIssue, type Stage } from '@/lib/pipeline-issues'
 
 export type JobName =
   | 'poll-creative-status'
@@ -19,6 +20,7 @@ export interface JobDef {
   label: string
   description: string
   category: string
+  stage: Stage
   cron: string
   run: () => Promise<unknown>
 }
@@ -31,6 +33,7 @@ export const JOB_DEFS: JobDef[] = [
     label: 'Poll creative status',
     description: 'Checks in-progress video/image generations and downloads finished media into storage.',
     category: 'Production',
+    stage: 'production',
     cron: process.env.CRON_POLL_CREATIVES ?? '*/1 * * * *',
     run: pollCreativeStatus,
   },
@@ -39,6 +42,7 @@ export const JOB_DEFS: JobDef[] = [
     label: 'Sync performance',
     description: 'Pulls daily spend / CPL / lead snapshots for live posts and flags creative fatigue.',
     category: 'Analytics',
+    stage: 'analytics',
     cron: process.env.CRON_SYNC_PERFORMANCE ?? '0 */6 * * *',
     run: syncPerformance,
   },
@@ -47,6 +51,7 @@ export const JOB_DEFS: JobDef[] = [
     label: 'Refresh trend context',
     description: 'Pulls Google Trends + competitor ads, synthesises market intelligence, and re-scores idea freshness.',
     category: 'Trends',
+    stage: 'trend_analysis',
     cron: process.env.CRON_TREND_CONTEXT ?? '0 6 * * *',
     run: () => runTrendContext(),
   },
@@ -55,6 +60,7 @@ export const JOB_DEFS: JobDef[] = [
     label: 'Feedback loop',
     description: 'Distills winning/losing patterns from 30-day performance into fresh idea briefs.',
     category: 'Ideas',
+    stage: 'feedback_loop',
     cron: process.env.CRON_FEEDBACK_LOOP ?? '0 8 * * *',
     run: runFeedbackLoop,
   },
@@ -63,6 +69,7 @@ export const JOB_DEFS: JobDef[] = [
     label: 'Reconcile posts',
     description: 'Detects ads deleted in Meta Ads Manager after publishing and marks them in the queue.',
     category: 'Publishing',
+    stage: 'publishing',
     cron: process.env.CRON_RECONCILE_POSTS ?? '0 */12 * * *',
     run: reconcilePosts,
   },
@@ -83,6 +90,26 @@ export async function getBoss(): Promise<PgBoss> {
   return globalForBoss.boss
 }
 
+// Run a job and log a pipeline issue if it throws, so every failure — whether it
+// came from the scheduler, Vercel Cron, or a manual run — surfaces in the
+// Evaluation tab instead of only in server logs. Re-throws so the caller still
+// sees the failure. QuickRefreshDiscardedError is an intentional empty lite trend
+// refresh, not a failure, so it is left unlogged.
+async function runJobGuarded(def: JobDef): Promise<void> {
+  try {
+    await def.run()
+  } catch (err) {
+    if (!(err instanceof Error && err.name === 'QuickRefreshDiscardedError')) {
+      await logPipelineIssue({
+        severity: 'critical',
+        stage: def.stage,
+        description: `Job "${def.label}" failed: ${String(err)}`,
+      })
+    }
+    throw err
+  }
+}
+
 // Create queues + attach workers exactly once. Workers sit idle until the
 // schedule (or a manual send) enqueues a job, so registering them up front is
 // cheap and lets us toggle automation purely via schedule/unschedule.
@@ -92,7 +119,7 @@ async function ensureRegistered(): Promise<PgBoss> {
   for (const def of JOB_DEFS) {
     await b.createQueue(def.name).catch(() => {})
     await b.work(def.name, async () => {
-      await def.run()
+      await runJobGuarded(def)
     })
   }
   globalForBoss.workersRegistered = true
@@ -218,7 +245,7 @@ export async function updateAutomation(patch: {
 export async function runJobNow(name: JobName): Promise<void> {
   const def = JOB_BY_NAME.get(name)
   if (!def) throw new Error(`Unknown job: ${name}`)
-  await def.run()
+  await runJobGuarded(def)
 }
 
 // Shape used by the API + UI: static metadata plus current on/off state.
