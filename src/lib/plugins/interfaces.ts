@@ -50,6 +50,11 @@ export interface IdeaSuggestion {
   // bold line beneath it. Both are required for a complete ad.
   primaryText: string
   headline: string
+  // YouTube (Demand Gen) copy: several short headlines (<=40) + descriptions (<=90)
+  // + a CTA enum. Optional — derived from the Meta copy if a generator omits them.
+  ytHeadlines?: string[]
+  ytDescriptions?: string[]
+  ytCallToAction?: string
   angle: string
   funnelStage?: 'TOF' | 'MOF' | 'BOF'
   trendTags: string[]

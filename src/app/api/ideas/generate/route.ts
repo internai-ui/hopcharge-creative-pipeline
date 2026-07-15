@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
         // Required fields - fall back to hook/title if the generator omitted them.
         primaryText: suggestion.primaryText?.trim() || suggestion.hook,
         headline: suggestion.headline?.trim() || suggestion.title,
+        // YouTube copy: use the generator's if present, else derive from the Meta copy.
+        ytHeadlines: suggestion.ytHeadlines?.length ? suggestion.ytHeadlines : [suggestion.headline?.trim() || suggestion.title],
+        ytDescriptions: suggestion.ytDescriptions?.length ? suggestion.ytDescriptions : [suggestion.primaryText?.trim() || suggestion.hook],
+        ytCallToAction: suggestion.ytCallToAction?.trim() || 'LEARN_MORE',
         angle: suggestion.angle,
         funnelStage: validStage,
         nudge,

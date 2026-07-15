@@ -45,6 +45,9 @@ export async function POST(req: NextRequest) {
         // Required - the manual drawer enforces these; fall back defensively.
         primaryText: body.primaryText?.trim() || body.hook,
         headline: body.headline?.trim() || body.title,
+        ytHeadlines: Array.isArray(body.ytHeadlines) && body.ytHeadlines.length ? body.ytHeadlines : [body.headline?.trim() || body.title],
+        ytDescriptions: Array.isArray(body.ytDescriptions) && body.ytDescriptions.length ? body.ytDescriptions : [body.primaryText?.trim() || body.hook],
+        ytCallToAction: body.ytCallToAction?.trim() || 'LEARN_MORE',
         angle: body.angle ?? 'pain_point',
         funnelStage: body.funnelStage ?? null,
         nudge: body.nudge,

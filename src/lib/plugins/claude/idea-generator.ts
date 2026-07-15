@@ -109,7 +109,7 @@ Generate exactly ${count} distinct ad ideas. For each idea:
 1. ${funnelAngleGuidance}
 2. Build on RISING topics and WINNING patterns - avoid declining trends
 3. Extract trendTags (2-4 tags from the current trend context that this idea rides)
-4. Write the Meta ad copy: a primaryText and a headline (see field rules below)
+4. Write BOTH the Meta ad copy (primaryText + headline) AND the YouTube copy (ytHeadlines + ytDescriptions + ytCallToAction) - see field rules below
 5. Set funnelStage to TOF, MOF, or BOF based on the ad's intent (${funnelMode === 'mix' ? 'vary it across the set' : `all ${funnelMode.toUpperCase()} for this batch`})
 6. Explain your reasoning in the rationale field, referencing the funnel stage, performance data, and trends
 7. Make this idea's VISUAL genuinely distinct from the others in this batch - see the visual diversity mandate below
@@ -127,6 +127,12 @@ This visual variety must NOT override strategy: each idea's angle, funnel stage,
 Every ad runs with a "Send WhatsApp Message" call-to-action button, so the copy must make the reader want to start a WhatsApp chat with Hopcharge - not click to a website.
 - primaryText: the main ad body shown above the creative. 1-3 short sentences (max ~125 chars before the "See more" cutoff matters most). Hook in the first line, conversational Indian-English tone, no clickbait. End by nudging the reader toward messaging on WhatsApp (e.g. "Message us to book", "WhatsApp us your area"). Match the funnel stage: TOF = curiosity/awareness, MOF = proof/benefits, BOF = pricing/offer/urgency.
 - headline: the short bold line beneath the creative. Max ~40 chars, punchy, benefit- or action-led (e.g. "Charging, at your doorstep", "Book your first charge").
+
+## Output format - YouTube (Demand Gen) copy field rules
+YouTube ads serve on Shorts / in-stream via Google Demand Gen, which has NO free-form body and NO WhatsApp CTA - it rotates several short assets. So write:
+- ytHeadlines: an array of 3-5 DISTINCT short headlines, each <=40 chars, punchy and benefit-led (Google mixes them - do not repeat the Meta headline for all of them).
+- ytDescriptions: an array of 2-4 DISTINCT descriptions, each <=90 chars, expanding the benefit/offer in conversational Indian-English, funnel-appropriate. Do NOT say "WhatsApp us" (that CTA does not exist on YouTube).
+- ytCallToAction: exactly ONE of LEARN_MORE, SIGN_UP, GET_QUOTE, SUBSCRIBE, VISIT_SITE, SHOP_NOW - pick by funnel (TOF -> LEARN_MORE, MOF -> GET_QUOTE or VISIT_SITE, BOF -> SIGN_UP or SUBSCRIBE).
 
 ## Output format - imageVisual field rules
 Write imageVisual as a concrete image prompt a generative AI (Flux / Stable Diffusion) can execute directly. Structure: [SUBJECT - what the frame is actually about: if a customer is present it is Sara (use her full description: Indian woman mid-to-late 20s, warm wheatish skin, round face full cheeks, large dark almond eyes, full lips warm genuine smile, long extremely thick voluminous near-black wavy hair falling to mid-back, athletic-curvy 165 cm, confident posture) with exact pose and expression - OR, for a no-customer ad, the van, the EV charging alone, a macro connector/charge-port detail, the technician, a cityscape, or an infographic scene] + [VAN - if in frame, use the physical description above and specify which van] + [COMPOSITION - choose and vary: rule of thirds / centred / diagonal / overhead flat-lay / extreme close-up / wide establishing; name foreground / midground / background layers] + [FROZEN MOMENT - the single decisive action] + [SETTING - a SPECIFIC Delhi-NCR location, deliberately different from the other ideas in this batch] + [LIGHTING - direction, quality, and TIME OF DAY - vary across the batch, not always golden hour] + [LENS - focal length and depth of field - vary the shot type, not always 50 mm] + [MOOD - one adjective]. Do NOT describe text, logos, or overlays - only the visual scene.
@@ -148,6 +154,9 @@ Respond with a JSON array only, no other text:
     "cta": "the in-creative call to action line",
     "primaryText": "follow the primaryText field rules above - WhatsApp-led ad body",
     "headline": "follow the headline field rules above - short bold line, max ~40 chars",
+    "ytHeadlines": ["<=40 chars", "<=40 chars", "<=40 chars"],
+    "ytDescriptions": ["<=90 chars", "<=90 chars"],
+    "ytCallToAction": "LEARN_MORE | SIGN_UP | GET_QUOTE | SUBSCRIBE | VISIT_SITE | SHOP_NOW",
     "angle": "pain_point | social_proof | curiosity_gap | lifestyle | education | values | convenience | problem_solution | discovery",
     "funnelStage": "TOF | MOF | BOF",
     "trendTags": ["tag1", "tag2"],
