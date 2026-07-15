@@ -21,6 +21,7 @@ import { AdLibraryStub } from './stubs/ad-library.stub'
 import { ClaudeIdeaGenerator } from './claude/idea-generator'
 import { ClaudeWebSearch } from './claude/web-search'
 import { MetaPublisher } from './meta/publisher'
+import { YouTubePublisher } from './youtube/publisher'
 import { MetaAnalytics } from './meta/analytics'
 import { MetaAdLibraryScraper } from './meta/ad-library'
 import { GoogleTrendsFetcher } from './google-trends/fetcher'
@@ -60,8 +61,21 @@ export function getImageGenerator(): ImageGeneratorPlugin {
 export function getMetaPublisher(): PublisherPlugin {
   switch (env('PUBLISHER_META')) {
     case 'meta': return new MetaPublisher()
-    default: return new PublisherStub()
+    default: return new PublisherStub('meta')
   }
+}
+
+export function getYouTubePublisher(): PublisherPlugin {
+  switch (env('PUBLISHER_YOUTUBE')) {
+    case 'youtube': return new YouTubePublisher()
+    default: return new PublisherStub('youtube')
+  }
+}
+
+// Route a post to the publisher for its platform. Used by the publish endpoint so
+// a YouTube post goes to Google Ads and a Meta post goes to the Graph API.
+export function getPublisher(platform: string): PublisherPlugin {
+  return platform === 'youtube' ? getYouTubePublisher() : getMetaPublisher()
 }
 
 export function getMetaAnalytics(): AnalyticsPlugin {

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { getMetaPublisher } from '@/lib/plugins/registry'
+import { getPublisher } from '@/lib/plugins/registry'
 import { logPipelineIssue } from '@/lib/pipeline-issues'
 import { NextRequest } from 'next/server'
 
@@ -13,7 +13,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     if (!post) return Response.json({ error: 'Post not found' }, { status: 404 })
     if (post.status === 'posted') return Response.json({ error: 'Post already published' }, { status: 400 })
 
-    const publisher = getMetaPublisher()
+    const publisher = getPublisher(post.platform)
     const adSchedule = post.adSchedule as { days: number[]; startHour: number; endHour: number } | null
     const idea = post.creative.idea
     const { externalPostId, isDraft } = await publisher.publish({
