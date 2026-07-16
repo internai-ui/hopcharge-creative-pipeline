@@ -1,50 +1,38 @@
 import { prisma } from '@/lib/db'
-import { getMetaAnalytics } from '@/lib/plugins/registry'
+import { getAnalytics } from '@/lib/plugins/registry'
+import type { AnalyticsPlugin } from '@/lib/plugins/interfaces'
 import { upsertPipelineAd } from '@/lib/meta-historical'
 import { reconcilePosts } from './reconcile-posts'
 
+type Snapshot = Awaited<ReturnType<AnalyticsPlugin['fetchPerformance']>>
+
 export async function syncPerformance(): Promise<void> {
-  // First reconcile against Ads Manager: any ad deleted on Meta's side is marked
-  // "deleted" here, which also drops it from the "posted" set fetched below.
+  // First reconcile against each platform's ad manager: any ad deleted upstream is
+  // marked "deleted" here, which also drops it from the "posted" set fetched below.
   await reconcilePosts()
 
-  // Only Meta posts - this job uses the Meta insights API. YouTube posts are
-  // synced separately (no YouTube analytics plugin yet).
+  // All live posts across platforms. Each platform is synced with its OWN analytics
+  // plugin — Meta via the Graph insights API, YouTube via Google Ads reporting —
+  // resolved by getAnalytics(platform), mirroring getPublisher(platform).
   const posts = await prisma.post.findMany({
-    where: { status: 'posted', externalPostId: { not: null }, platform: 'meta' },
+    where: { status: 'posted', externalPostId: { not: null } },
     include: {
       creative: { include: { idea: true } },
       snapshots: { orderBy: { snapshotDate: 'desc' }, take: 10 },
     },
   })
 
-  const analytics = getMetaAnalytics()
   const today = new Date()
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
   const dateRange = { from: yesterday, to: today }
   const threshold = Number(process.env.CPL_SUCCESS_THRESHOLD ?? 100)
-
-  // Prefer a single account-level batch call (Meta) over one request per post: if
-  // the plugin supports it, fetch every ad's insights up front, keyed by ad id. On
-  // failure fall back to the per-post path. Plugins without a batch method (the
-  // stub) always use per-post fetchPerformance.
-  let batch: Map<string, Awaited<ReturnType<typeof analytics.fetchPerformance>>> | null = null
-  if (analytics.fetchPerformanceBatch) {
-    try {
-      batch = await analytics.fetchPerformanceBatch({
-        externalPostIds: posts.map((p) => p.externalPostId!).filter(Boolean),
-        dateRange,
-      })
-    } catch (err) {
-      console.warn('[sync] batch insights failed, falling back to per-post fetch:', err)
-    }
-  }
-
-  // DB writes remain independent per post; a bounded worker pool keeps them
-  // concurrent without unbounded parallelism.
   const CONCURRENCY = Math.max(1, Number(process.env.SYNC_CONCURRENCY ?? 6))
 
-  async function syncOne(post: (typeof posts)[number]): Promise<void> {
+  async function syncOne(
+    post: (typeof posts)[number],
+    analytics: AnalyticsPlugin,
+    batch: Map<string, Snapshot> | null,
+  ): Promise<void> {
     try {
       const snapshot = batch
         ? batch.get(post.externalPostId!)
@@ -69,8 +57,10 @@ export async function syncPerformance(): Promise<void> {
         },
       })
 
-      // Update the historical baseline with this snapshot's CPL / leads
-      if (snapshot.cpl != null && post.externalPostId) {
+      // Update the historical baseline with this snapshot's CPL / leads. This baseline
+      // is Meta-only (keyed by metaAdId and used to seed the Meta idea generator), so
+      // YouTube posts are not fed into it.
+      if (post.platform === 'meta' && snapshot.cpl != null && post.externalPostId) {
         await upsertPipelineAd({
           metaAdId: post.externalPostId,
           adName: post.creative.idea.title,
@@ -129,13 +119,41 @@ export async function syncPerformance(): Promise<void> {
     }
   }
 
-  // Bounded worker pool: CONCURRENCY workers pull from a shared cursor until drained.
-  let cursor = 0
-  await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, posts.length) }, async () => {
-      while (cursor < posts.length) {
-        await syncOne(posts[cursor++])
+  // Group posts by platform and sync each group with its platform's analytics plugin.
+  const groups = new Map<string, (typeof posts)>()
+  for (const p of posts) {
+    const key = p.platform === 'youtube' ? 'youtube' : 'meta'
+    const arr = groups.get(key) ?? []
+    arr.push(p)
+    groups.set(key, arr)
+  }
+
+  for (const [platform, group] of groups) {
+    const analytics = getAnalytics(platform)
+
+    // Prefer a single batch call (Meta account-level insights / Google Ads IN query)
+    // over one request per post. On failure fall back to per-post fetchPerformance.
+    // Plugins without a batch method (the stub) always use per-post.
+    let batch: Map<string, Snapshot> | null = null
+    if (analytics.fetchPerformanceBatch) {
+      try {
+        batch = await analytics.fetchPerformanceBatch({
+          externalPostIds: group.map((p) => p.externalPostId!).filter(Boolean),
+          dateRange,
+        })
+      } catch (err) {
+        console.warn(`[sync] ${platform} batch insights failed, falling back to per-post fetch:`, err)
       }
-    }),
-  )
+    }
+
+    // Bounded worker pool: CONCURRENCY workers pull from a shared cursor until drained.
+    let cursor = 0
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, group.length) }, async () => {
+        while (cursor < group.length) {
+          await syncOne(group[cursor++], analytics, batch)
+        }
+      }),
+    )
+  }
 }

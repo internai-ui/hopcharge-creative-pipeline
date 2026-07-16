@@ -23,6 +23,7 @@ import { ClaudeWebSearch } from './claude/web-search'
 import { MetaPublisher } from './meta/publisher'
 import { YouTubePublisher } from './youtube/publisher'
 import { MetaAnalytics } from './meta/analytics'
+import { YouTubeAnalytics } from './youtube/analytics'
 import { MetaAdLibraryScraper } from './meta/ad-library'
 import { GoogleTrendsFetcher } from './google-trends/fetcher'
 import { HiggsfieldGenerator, HiggsfieldImageGenerator } from './higgsfield'
@@ -83,6 +84,20 @@ export function getMetaAnalytics(): AnalyticsPlugin {
     case 'meta': return new MetaAnalytics()
     default: return new AnalyticsStub()
   }
+}
+
+export function getYouTubeAnalytics(): AnalyticsPlugin {
+  switch (env('ANALYTICS_YOUTUBE')) {
+    case 'youtube': return new YouTubeAnalytics()
+    default: return new AnalyticsStub()
+  }
+}
+
+// Route a post to the analytics plugin for its platform, mirroring getPublisher.
+// A YouTube post's performance comes from Google Ads reporting; a Meta post's from
+// the Graph insights API.
+export function getAnalytics(platform: string): AnalyticsPlugin {
+  return platform === 'youtube' ? getYouTubeAnalytics() : getMetaAnalytics()
 }
 
 export function getTrendData(): TrendDataPlugin {
