@@ -330,6 +330,14 @@ export function IdeaCard({
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1" title="Still for the video's opening frame (image2video first frame)">Frame 1</span>
         <div>{renderEditableText('videoFirstFrame', true)}</div>
 
+        {/* ── Meta ad copy - the single-headline + primary-text format Meta ads use ── */}
+        <div className="col-span-2 mt-1.5 pt-2.5 border-t border-brand-border/70 flex items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-[#1877f2] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+            Meta
+          </span>
+          <span className="text-[11px] text-brand-muted">Ad copy · Reels / Feed</span>
+        </div>
+
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">CTA</span>
         <div>{renderEditableText('cta')}</div>
 
@@ -344,7 +352,12 @@ export function IdeaCard({
           <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
             YouTube
           </span>
-          <span className="text-[11px] text-brand-muted">Demand Gen copy</span>
+          <span
+            className="text-[11px] text-brand-muted cursor-help"
+            title="Google Ads 'Demand Gen' responsive ad copy: several short headlines (≤40) and descriptions (≤90) that Google mixes and matches across YouTube Shorts, in-stream and Discover."
+          >
+            Ad copy · Google Demand Gen
+          </span>
         </div>
 
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headlines</span>

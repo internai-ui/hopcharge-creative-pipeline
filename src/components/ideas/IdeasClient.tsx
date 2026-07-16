@@ -37,6 +37,7 @@ const MANUAL_NOTICE = 'Prompt ready. Head to Review to copy it, generate on Higg
 interface Props {
   initialIdeas: Idea[]
   latestTrend: TrendContext | null
+  manualDefault: boolean
 }
 
 function SortableIdeaCard({
@@ -82,9 +83,12 @@ function SortableIdeaCard({
   )
 }
 
-export function IdeasClient({ initialIdeas, latestTrend }: Props) {
+export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props) {
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas)
   const [trendContext, setTrendContext] = useState<TrendContext | null>(latestTrend)
+  // Manual (copy-paste) generation toggle - sent with every generate call so it
+  // overrides the server env default per action.
+  const [manualMode, setManualMode] = useState(manualDefault)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [addDrawerOpen, setAddDrawerOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
@@ -177,7 +181,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, platform }),
+        body: JSON.stringify({ ideaId: id, platform, manual: manualMode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -194,7 +198,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     } finally {
       setImageGenerating(null)
     }
-  }, [])
+  }, [manualMode])
 
   const handleRegenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
@@ -205,7 +209,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, regenerate: true, platform }),
+        body: JSON.stringify({ ideaId: id, regenerate: true, platform, manual: manualMode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -221,7 +225,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     } finally {
       setImageGenerating(null)
     }
-  }, [])
+  }, [manualMode])
 
   const handleRegenerate = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
@@ -233,7 +237,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, regenerate: true, platform }),
+        body: JSON.stringify({ ideaId: id, regenerate: true, platform, manual: manualMode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -247,7 +251,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     } catch (e) {
       setGenerationError(`Network error: ${String(e)}`)
     }
-  }, [handleUpdate])
+  }, [handleUpdate, manualMode])
 
   const handleSelectForProduction = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
@@ -258,7 +262,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, platform }),
+        body: JSON.stringify({ ideaId: id, platform, manual: manualMode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -273,7 +277,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     } catch (e) {
       setGenerationError(`Network error: ${String(e)}`)
     }
-  }, [handleUpdate])
+  }, [handleUpdate, manualMode])
 
   const runPending = useCallback((platform: 'meta' | 'youtube') => {
     if (!pendingGen) return
@@ -379,6 +383,36 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
               + Generate ideas
             </button>
           </div>
+
+          {/* Generation mode toggle: Auto (calls the generation API) vs Manual
+              (hands you the prompt to run on Higgsfield, then you upload the result). */}
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className="text-brand-muted cursor-help"
+              title="Auto: generate via the configured API (Higgsfield/Runway/etc.). Manual: the app gives you the exact prompt to run on Higgsfield yourself, then you upload the result on the Review page."
+            >
+              Creative generation
+            </span>
+            <div className="inline-flex rounded-full border border-brand-border bg-white p-0.5">
+              <button
+                onClick={() => setManualMode(false)}
+                className={`px-2.5 py-1 rounded-full font-medium transition-colors ${!manualMode ? 'bg-brand text-white' : 'text-brand-muted hover:text-brand-dark'}`}
+              >
+                Auto
+              </button>
+              <button
+                onClick={() => setManualMode(true)}
+                className={`px-2.5 py-1 rounded-full font-medium transition-colors ${manualMode ? 'bg-brand text-white' : 'text-brand-muted hover:text-brand-dark'}`}
+              >
+                Manual
+              </button>
+            </div>
+          </div>
+          {manualMode && (
+            <span className="text-[11px] text-right text-brand-muted max-w-[15rem]">
+              You&rsquo;ll get the prompt to run on Higgsfield, then upload the result in Review.
+            </span>
+          )}
           {baseline !== null && (
             <span className="text-xs text-right text-brand-muted">
               {baseline.total === 0 ? (

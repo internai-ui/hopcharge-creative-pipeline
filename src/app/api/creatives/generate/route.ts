@@ -6,8 +6,10 @@ import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { ideaId, generator: generatorOverride, regenerate, platform } = await req.json()
+    const { ideaId, generator: generatorOverride, regenerate, platform, manual } = await req.json()
     const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
+    // The Ideas-page toggle sends an explicit boolean that overrides the env default.
+    const useManual = typeof manual === 'boolean' ? manual : process.env.VIDEO_GENERATOR === 'manual'
 
     const idea = await prisma.idea.findUnique({ where: { id: ideaId } })
     if (!idea) return Response.json({ error: 'Idea not found' }, { status: 404 })
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
     // prompt + the opening-frame prompt (Higgsfield image2video needs a first frame),
     // stash them on the creative, and park it in `awaiting_upload` for the Review page
     // to hand off (copy → generate externally → upload the result back in).
-    if (process.env.VIDEO_GENERATOR === 'manual') {
+    if (useManual) {
       const prompt = buildVideoPrompt(idea.videoVisual)
       const firstFramePrompt = buildImagePrompt(
         idea.videoFirstFrame?.trim() || deriveFirstFrameVisual(idea.videoVisual),

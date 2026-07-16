@@ -16,8 +16,10 @@ async function readImageBuffer(fileUrl: string): Promise<{ buffer: Buffer; ext: 
 
 export async function POST(req: NextRequest) {
   try {
-    const { ideaId, regenerate, platform } = await req.json()
+    const { ideaId, regenerate, platform, manual } = await req.json()
     const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
+    // The Ideas-page toggle sends an explicit boolean that overrides the env default.
+    const useManual = typeof manual === 'boolean' ? manual : process.env.IMAGE_GENERATOR === 'manual'
 
     const idea = await prisma.idea.findUnique({ where: { id: ideaId } })
     if (!idea) return Response.json({ error: 'Idea not found' }, { status: 404 })
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
     // generator, we build the exact prompt + config, stash it on the creative, and
     // park it in `awaiting_upload` so the Review page can hand the prompt to the user
     // (copy → generate on Higgsfield/etc. → upload the result back in).
-    if (process.env.IMAGE_GENERATOR === 'manual') {
+    if (useManual) {
       const prompt = buildImagePrompt(idea.imageVisual, { angle: idea.angle })
       const creative = await prisma.creative.create({
         data: {
