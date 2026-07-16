@@ -28,7 +28,7 @@ export default async function SignInPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-bg px-6">
-      <div className="w-full max-w-sm rounded-sm border border-brand-border bg-white p-8 text-center shadow-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-brand-border bg-white p-8 text-center shadow-lg">
         <Image
           src="/hopcharge-logo.svg"
           alt="Hopcharge"
@@ -41,7 +41,7 @@ export default async function SignInPage({
         <p className="mb-6 text-sm text-brand-muted">Sign in with your Hopcharge account to continue.</p>
 
         {message && (
-          <p className="mb-4 rounded-sm border border-brand-accent/30 bg-brand-accent/10 px-3 py-2 text-sm text-brand-accent">
+          <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {message}
           </p>
         )}

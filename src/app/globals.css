@@ -30,7 +30,7 @@ body {
   background-color: #f4f7fc;
 }
 
-/* ── Hopcharge button base - matches website: border-radius 2px, 0.2s transition ── */
+/* ── Hopcharge button base - 8px radius (rounded-lg) to match the app's buttons ── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -42,7 +42,7 @@ body {
   font-weight: 500;
   padding: 0 1.25rem;
   height: 40px;
-  border-radius: 2px;
+  border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -62,7 +62,7 @@ body {
   font-weight: 500;
   padding: 0 1rem;
   height: 40px;
-  border-radius: 2px;
+  border-radius: 8px;
   border: 1px solid #dde5ed;
   cursor: pointer;
   transition: all 0.2s;

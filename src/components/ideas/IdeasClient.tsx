@@ -313,8 +313,8 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5 animate-page">
       {pendingGen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6" onClick={() => setPendingGen(null)}>
-          <div className="w-full max-w-xs rounded-sm border border-brand-border bg-white p-6 text-center shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-overlay" onClick={() => setPendingGen(null)}>
+          <div className="w-full max-w-sm rounded-2xl border border-brand-border bg-white p-6 text-center shadow-2xl animate-modal-in" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-1 text-base font-semibold text-brand">Generate for which platform?</h2>
             <p className="mb-5 text-xs text-brand-muted">Meta renders 9:16. YouTube renders a 9:16 Short + a 16:9 in-stream video.</p>
             <div className="flex gap-3">
