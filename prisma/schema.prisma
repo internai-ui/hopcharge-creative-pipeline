@@ -192,6 +192,7 @@ enum FunnelStage {
 
 enum CreativeStatus {
   generating
+  awaiting_upload
   ready_for_review
   approved
   rejected

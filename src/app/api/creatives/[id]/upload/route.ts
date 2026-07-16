@@ -45,6 +45,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
+
+    // Manual-generation first upload: the creative has no media yet (it was parked in
+    // `awaiting_upload` with only a prompt). This upload IS the original asset, so store
+    // it as the original and advance it into the normal review flow - it is not an edit.
+    if (creative.status === 'awaiting_upload') {
+      const originalPath = `creatives/${id}/original.${ext}`
+      await storage.save(originalPath, buffer)
+      if (creative.originalFilePath && creative.originalFilePath !== originalPath) {
+        await storage.delete(creative.originalFilePath).catch(() => {})
+      }
+      const advanced = await prisma.creative.update({
+        where: { id },
+        data: { originalFilePath: originalPath, status: 'ready_for_review' },
+      })
+      return Response.json(advanced)
+    }
+
     const filePath = `creatives/${id}/edited.${ext}`
     await storage.save(filePath, buffer)
 

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { storage } from '@/lib/storage'
 import { getVideoGenerator, getImageGenerator } from '@/lib/plugins/registry'
-import { buildImagePrompt, deriveFirstFrameVisual } from '@/lib/plugins/prompt-constants'
+import { buildImagePrompt, buildVideoPrompt, deriveFirstFrameVisual } from '@/lib/plugins/prompt-constants'
 import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -40,9 +40,34 @@ export async function POST(req: NextRequest) {
     // live one - a duplicate submission burns generation credits for nothing.
     if (!regenerate) {
       const active = await prisma.creative.findFirst({
-        where: { ideaId, mediaType: 'video', status: { in: ['generating', 'ready_for_review', 'approved', 'published'] } },
+        where: { ideaId, mediaType: 'video', status: { in: ['generating', 'awaiting_upload', 'ready_for_review', 'approved', 'published'] } },
       })
       if (active) return Response.json(active, { status: 200 })
+    }
+
+    // Manual (copy-paste) mode: no video-generation API available. Build the full
+    // prompt + the opening-frame prompt (Higgsfield image2video needs a first frame),
+    // stash them on the creative, and park it in `awaiting_upload` for the Review page
+    // to hand off (copy → generate externally → upload the result back in).
+    if (process.env.VIDEO_GENERATOR === 'manual') {
+      const prompt = buildVideoPrompt(idea.videoVisual)
+      const firstFramePrompt = buildImagePrompt(
+        idea.videoFirstFrame?.trim() || deriveFirstFrameVisual(idea.videoVisual),
+        { angle: idea.angle },
+      )
+      const creative = await prisma.creative.create({
+        data: {
+          ideaId,
+          platform: targetPlatform,
+          aspectRatio: '9:16',
+          mediaType: 'video',
+          status: 'awaiting_upload',
+          generatorName: 'manual',
+          metadata: { manual: { tool: 'higgsfield', mediaType: 'video', aspectRatio: '9:16', prompt, firstFramePrompt } },
+        },
+      })
+      await prisma.idea.update({ where: { id: ideaId }, data: { status: 'in_production' } })
+      return Response.json(creative, { status: 201 })
     }
 
     const generator = getVideoGenerator()

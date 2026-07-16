@@ -41,6 +41,34 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Manual (copy-paste) mode: no generation API available. Instead of calling a
+    // generator, we build the exact prompt + config, stash it on the creative, and
+    // park it in `awaiting_upload` so the Review page can hand the prompt to the user
+    // (copy → generate on Higgsfield/etc. → upload the result back in).
+    if (process.env.IMAGE_GENERATOR === 'manual') {
+      const prompt = buildImagePrompt(idea.imageVisual, { angle: idea.angle })
+      const creative = await prisma.creative.create({
+        data: {
+          ideaId,
+          platform: targetPlatform,
+          aspectRatio: '9:16',
+          mediaType: 'image',
+          status: 'awaiting_upload',
+          generatorName: 'manual',
+          metadata: { manual: { tool: 'higgsfield', mediaType: 'image', aspectRatio: '9:16', prompt } },
+        },
+      })
+      await prisma.idea.update({ where: { id: ideaId }, data: { status: 'in_production' } })
+      await prisma.agentAction.create({
+        data: {
+          actionType: 'manual_generation_prepared',
+          decisionRationale: `Manual image prompt prepared for idea "${idea.title}" - awaiting upload of the generated still`,
+          relatedEntityId: creative.id,
+        },
+      })
+      return Response.json([creative], { status: 201 })
+    }
+
     const generator = getImageGenerator()
     const prompt = buildImagePrompt(idea.imageVisual, { angle: idea.angle })
 

@@ -25,6 +25,15 @@ import { AddIdeaDrawer } from './AddIdeaDrawer'
 import { TrendContextPanel } from './TrendContextPanel'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
+// A generate response points at manual (copy-paste) mode when the created creative is
+// parked in `awaiting_upload` (generate-image returns an array, generate a single object).
+function isManualCreative(payload: unknown): boolean {
+  const c = Array.isArray(payload) ? payload[0] : payload
+  return !!c && typeof c === 'object' && (c as { status?: string }).status === 'awaiting_upload'
+}
+
+const MANUAL_NOTICE = 'Prompt ready. Head to Review to copy it, generate on Higgsfield, then upload the result.'
+
 interface Props {
   initialIdeas: Idea[]
   latestTrend: TrendContext | null
@@ -148,6 +157,9 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
 
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [generationErrorType, setGenerationErrorType] = useState<'video' | 'image'>('video')
+  // Set when generation runs in manual (copy-paste) mode - nudges the user to Review
+  // to copy the prompt and upload the media they generate on Higgsfield.
+  const [genNotice, setGenNotice] = useState<string | null>(null)
 
   const [imageGenerating, setImageGenerating] = useState<string | null>(null)
 
@@ -159,6 +171,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
   const handleGenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('image')
+    setGenNotice(null)
     setImageGenerating(id)
     try {
       const res = await fetch('/api/creatives/generate-image', {
@@ -170,6 +183,8 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
         const data = await res.json()
         setGenerationError(data.details ?? data.error ?? 'Image generation failed')
       } else {
+        const payload = await res.json().catch(() => null)
+        if (isManualCreative(payload)) setGenNotice(MANUAL_NOTICE)
         // Refresh so card shows in_production status
         const ideasRes = await fetch('/api/ideas')
         setIdeas(await ideasRes.json())
@@ -184,6 +199,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
   const handleRegenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('image')
+    setGenNotice(null)
     setImageGenerating(id)
     try {
       const res = await fetch('/api/creatives/generate-image', {
@@ -195,6 +211,8 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
         const data = await res.json()
         setGenerationError(data.details ?? data.error ?? 'Image regeneration failed')
       } else {
+        const payload = await res.json().catch(() => null)
+        if (isManualCreative(payload)) setGenNotice(MANUAL_NOTICE)
         const ideasRes = await fetch('/api/ideas')
         setIdeas(await ideasRes.json())
       }
@@ -208,6 +226,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
   const handleRegenerate = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('video')
+    setGenNotice(null)
     // Reset idea to in_production so card shows the right status
     await handleUpdate(id, { status: 'in_production' as never })
     try {
@@ -219,6 +238,9 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       if (!res.ok) {
         const data = await res.json()
         setGenerationError(data.details ?? data.error ?? 'Regeneration failed')
+      } else {
+        const payload = await res.json().catch(() => null)
+        if (isManualCreative(payload)) setGenNotice(MANUAL_NOTICE)
       }
       const ideasRes = await fetch('/api/ideas')
       setIdeas(await ideasRes.json())
@@ -230,6 +252,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
   const handleSelectForProduction = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('video')
+    setGenNotice(null)
     await handleUpdate(id, { status: 'selected' as never })
     try {
       const res = await fetch('/api/creatives/generate', {
@@ -241,6 +264,9 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
         const data = await res.json()
         const detail = data.details ?? data.error ?? 'Video generation failed'
         setGenerationError(detail)
+      } else {
+        const payload = await res.json().catch(() => null)
+        if (isManualCreative(payload)) setGenNotice(MANUAL_NOTICE)
       }
       const ideasRes = await fetch('/api/ideas')
       setIdeas(await ideasRes.json())
@@ -380,6 +406,20 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
           message={generationError}
           onDismiss={() => setGenerationError(null)}
         />
+      )}
+
+      {genNotice && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-sm text-indigo-900">{genNotice}</p>
+          <div className="flex items-center gap-3 shrink-0">
+            <a href="/review" className="text-sm font-medium text-indigo-700 hover:text-indigo-900 underline underline-offset-2">
+              Go to Review
+            </a>
+            <button onClick={() => setGenNotice(null)} className="text-indigo-400 hover:text-indigo-700" aria-label="Dismiss">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="13" y2="13" /><line x1="13" y1="1" x2="1" y2="13" /></svg>
+            </button>
+          </div>
+        </div>
       )}
 
       {importError && (

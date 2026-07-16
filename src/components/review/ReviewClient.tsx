@@ -8,13 +8,21 @@ type CreativeWithIdea = Creative & { idea: Idea }
 
 const STATUS_META: Record<string, { label: string; chip: string; dot: string }> = {
   generating:       { label: 'Generating',  chip: 'bg-amber-50 text-amber-700 ring-amber-600/20',     dot: 'bg-amber-500' },
+  awaiting_upload:  { label: 'Awaiting upload', chip: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20', dot: 'bg-indigo-500' },
   ready_for_review: { label: 'For review',   chip: 'bg-blue-50 text-blue-700 ring-blue-600/20',        dot: 'bg-blue-500' },
   approved:         { label: 'Approved',     chip: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-500' },
   rejected:         { label: 'Rejected',     chip: 'bg-red-50 text-red-600 ring-red-600/20',           dot: 'bg-red-500' },
   published:        { label: 'Published',    chip: 'bg-brand-surface text-brand-dark ring-brand-border', dot: 'bg-brand-dark' },
 }
 
-const FILTERS = ['', 'generating', 'ready_for_review', 'approved', 'rejected', 'published'] as const
+const FILTERS = ['', 'generating', 'awaiting_upload', 'ready_for_review', 'approved', 'rejected', 'published'] as const
+
+// Metadata shape stashed on a creative when generation runs in manual (copy-paste) mode.
+type ManualMeta = { tool?: string; mediaType?: string; aspectRatio?: string; prompt: string; firstFramePrompt?: string }
+function getManual(c: { metadata: unknown }): ManualMeta | null {
+  const m = c.metadata as { manual?: ManualMeta } | null
+  return m?.manual ?? null
+}
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +93,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
   const filtered = creatives.filter((c) => !statusFilter || c.status === statusFilter)
   const generatingCreatives = creatives.filter((c) => c.status === 'generating')
   const generatingCount = generatingCreatives.length
+  const awaitingUploadCount = creatives.filter((c) => c.status === 'awaiting_upload').length
 
   // Auto-poll generating creatives every 15 seconds (covers both async images & videos).
   useEffect(() => {
@@ -219,6 +228,17 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
         )
       })()}
 
+      {/* ── Awaiting-upload banner (manual generation mode) ── */}
+      {awaitingUploadCount > 0 && (
+        <div className="mb-5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <UploadCloudIcon className="w-4 h-4 text-indigo-600 shrink-0" />
+          <p className="text-sm text-indigo-900">
+            <span className="font-medium">{awaitingUploadCount} creative{awaitingUploadCount !== 1 ? 's' : ''} awaiting upload.</span>{' '}
+            Open one to copy its prompt, generate it on Higgsfield, then upload the result here.
+          </p>
+        </div>
+      )}
+
       {/* ── Grid ── */}
       {filtered.length === 0 ? (
         <div className="border border-dashed border-brand-border rounded-2xl py-20 px-6 text-center">
@@ -279,6 +299,8 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                   ) : (
                     <MediaStage label={selected.mediaType === 'image' ? 'Image' : 'Video'} mediaType={selected.mediaType} src={`/api/creatives/${selected.id}/download?v=${new Date(selected.updatedAt).getTime()}`} />
                   )
+                ) : selected.status === 'awaiting_upload' ? (
+                  <ManualGenPanel manual={getManual(selected)} mediaType={selected.mediaType} />
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3 text-brand-muted min-h-[280px]">
                     {selected.status === 'generating' ? (
@@ -330,6 +352,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                     mediaType={selected.mediaType}
                     uploading={uploading}
                     progress={uploadProgress}
+                    initial={selected.status === 'awaiting_upload'}
                     onFile={(file) => handleUpload(selected.id, file)}
                   />
                 </div>
@@ -357,6 +380,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                         {selected.status === 'approved' ? 'Approved - ready to publish.' :
                          selected.status === 'rejected' ? 'Rejected.' :
                          selected.status === 'published' ? 'Published.' :
+                         selected.status === 'awaiting_upload' ? 'Copy the prompt, generate on Higgsfield, then upload the result above.' :
                          'Waiting for generation to finish.'}
                       </span>
                     )}
@@ -438,6 +462,14 @@ function CreativeCard({
           {creative.platform === 'youtube' ? 'YouTube' : 'Meta'}
         </span>
 
+        {creative.status === 'awaiting_upload' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-indigo-900/70 gap-2">
+            <UploadCloudIcon className="text-white/90" />
+            <span className="text-white text-xs font-medium">Awaiting upload</span>
+            <span className="text-white/70 text-[11px]">Open to copy the prompt</span>
+          </div>
+        )}
+
         {creative.status === 'generating' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-2.5">
             <Spinner className="w-6 h-6 text-white" />
@@ -504,17 +536,20 @@ function MediaStage({ label, src, mediaType, highlight }: { label: string; src: 
 }
 
 function Dropzone({
-  mediaType, uploading, progress, onFile,
+  mediaType, uploading, progress, onFile, initial = false,
 }: {
   mediaType: string
   uploading: boolean
   progress: number
   onFile: (file: File) => void
+  /** First upload of a manual-mode creative (not a human edit of an existing one). */
+  initial?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const kind = mediaType === 'image' ? 'image' : 'video'
   const hint = mediaType === 'image' ? 'PNG, JPG or WEBP' : 'MP4 or WEBM'
+  const verb = initial ? 'generated' : 'edited'
 
   const open = () => inputRef.current?.click()
 
@@ -522,7 +557,7 @@ function Dropzone({
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Upload an edited ${kind}`}
+      aria-label={`Upload the ${verb} ${kind}`}
       onClick={open}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } }}
       onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true) }}
@@ -554,7 +589,7 @@ function Dropzone({
             <UploadCloudIcon />
           </div>
           <p className="text-sm font-medium text-brand-dark">
-            {dragging ? `Drop to replace the ${kind}` : `Drag & drop an edited ${kind}`}
+            {dragging ? `Drop to ${initial ? 'upload' : 'replace'} the ${kind}` : `Drag & drop the ${verb} ${kind}`}
           </p>
           <p className="text-xs text-brand-muted">or <span className="text-brand font-medium">browse</span> · {hint}</p>
         </div>
@@ -565,6 +600,91 @@ function Dropzone({
         className="hidden"
         accept={mediaType === 'image' ? 'image/*' : 'video/*'}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f) }}
+      />
+    </div>
+  )
+}
+
+// ── Manual generation panel (shown for `awaiting_upload` creatives) ────────────
+// No generation API is configured (IMAGE_GENERATOR / VIDEO_GENERATOR = manual), so
+// we hand the user the exact prompt + config to paste into Higgsfield, then they
+// upload the result via the dropzone in the side panel.
+function ManualGenPanel({ manual, mediaType }: { manual: ManualMeta | null; mediaType: string }) {
+  const [copied, setCopied] = useState<string | null>(null)
+  const kind = mediaType === 'image' ? 'image' : 'video'
+
+  const copy = async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(key)
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1600)
+    } catch { /* clipboard blocked - the textarea is still selectable for manual copy */ }
+  }
+
+  if (!manual) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-brand-muted min-h-[280px]">
+        <UploadCloudIcon />
+        <p className="text-sm">Upload the generated {kind} from the panel on the right.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 flex flex-col gap-4 min-h-[280px] overflow-y-auto">
+      <div>
+        <h3 className="text-sm font-semibold text-brand-dark">Generate this {kind} manually</h3>
+        <p className="text-xs text-brand-muted mt-0.5">
+          Copy the prompt → generate on Higgsfield → upload the result from the panel on the right.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {[`Aspect ${manual.aspectRatio ?? '9:16'}`, kind, manual.tool ?? 'higgsfield'].map((t) => (
+          <span key={t} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white ring-1 ring-brand-border text-brand-muted capitalize">{t}</span>
+        ))}
+      </div>
+
+      <PromptBlock
+        label={kind === 'video' ? 'Video prompt' : 'Image prompt'}
+        text={manual.prompt}
+        copied={copied === 'prompt'}
+        onCopy={() => copy('prompt', manual.prompt)}
+      />
+
+      {manual.firstFramePrompt && (
+        <PromptBlock
+          label="Opening-frame prompt (for image→video)"
+          text={manual.firstFramePrompt}
+          copied={copied === 'frame'}
+          onCopy={() => copy('frame', manual.firstFramePrompt!)}
+        />
+      )}
+
+      <a href="https://higgsfield.ai/" target="_blank" rel="noopener noreferrer" className="btn-primary w-full">
+        Open Higgsfield ↗
+      </a>
+    </div>
+  )
+}
+
+function PromptBlock({ label, text, copied, onCopy }: { label: string; text: string; copied: boolean; onCopy: () => void }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
+        <button
+          onClick={onCopy}
+          className={`text-xs font-medium px-2 py-0.5 rounded-md transition-colors ${copied ? 'text-emerald-600' : 'text-brand hover:text-brand-dark'}`}
+        >
+          {copied ? 'Copied ✓' : 'Copy'}
+        </button>
+      </div>
+      <textarea
+        readOnly
+        value={text}
+        onFocus={(e) => e.currentTarget.select()}
+        className="w-full h-40 resize-none rounded-xl bg-white ring-1 ring-brand-border p-3 text-xs leading-relaxed text-brand-dark font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
       />
     </div>
   )
