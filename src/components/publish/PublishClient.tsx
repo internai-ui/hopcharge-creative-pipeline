@@ -127,7 +127,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [modalClosing, setModalClosing] = useState(false)
   const [previewCreative, setPreviewCreative] = useState<CreativeWithIdea | null>(null)
   const [previewClosing, setPreviewClosing] = useState(false)
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['meta'])
+  const [draft, setDraft] = useState(true) // per-publish draft (PAUSED) vs production (live)
   const [scheduledAt, setScheduledAt] = useState('')
   const [useAdSchedule, setUseAdSchedule] = useState(false)
   const [adScheduleDays, setAdScheduleDays] = useState<number[]>([1, 2, 3, 4, 5]) // Mon-Fri
@@ -171,7 +171,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creativeId: creative.id,
-          platforms: selectedPlatforms,
+          platforms: [creative.platform],
           scheduledAt: scheduledAt || undefined,
           adSchedule: useAdSchedule ? {
             days: adScheduleDays,
@@ -196,7 +196,11 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
       let allSucceeded = true
       if (!scheduledAt) {
         for (const post of newPosts) {
-          const publishRes = await fetch(`/api/posts/${post.id}/publish`, { method: 'POST' })
+          const publishRes = await fetch(`/api/posts/${post.id}/publish`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ draft }),
+          })
           if (!publishRes.ok) allSucceeded = false
         }
       }
@@ -215,7 +219,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
         return next
       })
     }
-  }, [confirmCreative, selectedPlatforms, scheduledAt, posts, closeModal])
+  }, [confirmCreative, draft, scheduledAt, posts, closeModal])
 
   useEffect(() => {
     if (!confirmCreative) return
@@ -535,24 +539,28 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-dark mb-1.5">Platforms</label>
-              <div className="flex gap-3">
-                {['meta', 'youtube'].map((p) => (
-                  <label key={p} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlatforms.includes(p)}
-                      onChange={(e) => setSelectedPlatforms(
-                        e.target.checked
-                          ? [...selectedPlatforms, p]
-                          : selectedPlatforms.filter((x) => x !== p)
-                      )}
-                      className="accent-indigo-500"
-                    />
-                    <span className="text-sm text-brand-dark capitalize">{p}</span>
-                  </label>
-                ))}
+              <label className="block text-sm font-medium text-brand-dark mb-1.5">Platform</label>
+              <span className={`inline-flex items-center text-sm font-semibold px-2.5 py-1 rounded text-white ${confirmCreative?.platform === 'youtube' ? 'bg-red-600' : 'bg-[#1877f2]'}`}>
+                {confirmCreative?.platform === 'youtube' ? 'YouTube' : 'Meta'}
+              </span>
+              <p className="mt-1 text-xs text-brand-muted">Chosen when the creative was generated — publishes to its own platform.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-brand-dark mb-1.5">Mode</label>
+              <div className="inline-flex rounded-lg border border-brand-border overflow-hidden">
+                <button type="button" onClick={() => setDraft(true)}
+                  className={`px-3 py-1.5 text-sm transition-colors ${draft ? 'bg-brand text-white' : 'text-brand-muted hover:bg-brand-surface'}`}>
+                  Draft
+                </button>
+                <button type="button" onClick={() => setDraft(false)}
+                  className={`px-3 py-1.5 text-sm transition-colors ${!draft ? 'bg-brand-accent text-white' : 'text-brand-muted hover:bg-brand-surface'}`}>
+                  Production
+                </button>
               </div>
+              <p className="mt-1 text-xs text-brand-muted">
+                {draft ? 'Saves a PAUSED draft on the platform — nothing goes live or spends.' : 'Publishes a LIVE ad — it will serve and spend budget.'}
+              </p>
             </div>
 
             <div>
@@ -623,7 +631,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
               </button>
               <button
                 onClick={handleCreatePost}
-                disabled={modalPosting || selectedPlatforms.length === 0}
+                disabled={modalPosting}
                 className="flex-1 bg-brand hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition-all duration-200"
               >
                 {modalPosting ? 'Posting...' : scheduledAt ? 'Schedule' : 'Post now'}

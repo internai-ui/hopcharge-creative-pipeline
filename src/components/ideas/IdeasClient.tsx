@@ -151,7 +151,12 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
 
   const [imageGenerating, setImageGenerating] = useState<string | null>(null)
 
-  const handleGenerateImage = useCallback(async (id: string) => {
+  // Platform picker: clicking a generate button opens a Meta/YouTube chooser, and
+  // the choice is passed into the generation call so the creative is built for it
+  // (aspect ratio + which publisher it later goes to).
+  const [pendingGen, setPendingGen] = useState<{ id: string; action: 'image' | 'regenImage' | 'video' | 'regenVideo' } | null>(null)
+
+  const handleGenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('image')
     setImageGenerating(id)
@@ -159,7 +164,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id }),
+        body: JSON.stringify({ ideaId: id, platform }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -176,7 +181,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     }
   }, [])
 
-  const handleRegenerateImage = useCallback(async (id: string) => {
+  const handleRegenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('image')
     setImageGenerating(id)
@@ -184,7 +189,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, regenerate: true }),
+        body: JSON.stringify({ ideaId: id, regenerate: true, platform }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -200,7 +205,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     }
   }, [])
 
-  const handleRegenerate = useCallback(async (id: string) => {
+  const handleRegenerate = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('video')
     // Reset idea to in_production so card shows the right status
@@ -209,7 +214,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id, regenerate: true }),
+        body: JSON.stringify({ ideaId: id, regenerate: true, platform }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -222,7 +227,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
     }
   }, [handleUpdate])
 
-  const handleSelectForProduction = useCallback(async (id: string) => {
+  const handleSelectForProduction = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
     setGenerationErrorType('video')
     await handleUpdate(id, { status: 'selected' as never })
@@ -230,7 +235,7 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       const res = await fetch('/api/creatives/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaId: id }),
+        body: JSON.stringify({ ideaId: id, platform }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -243,6 +248,16 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
       setGenerationError(`Network error: ${String(e)}`)
     }
   }, [handleUpdate])
+
+  const runPending = useCallback((platform: 'meta' | 'youtube') => {
+    if (!pendingGen) return
+    const { id, action } = pendingGen
+    setPendingGen(null)
+    if (action === 'image') handleGenerateImage(id, platform)
+    else if (action === 'regenImage') handleRegenerateImage(id, platform)
+    else if (action === 'video') handleSelectForProduction(id, platform)
+    else handleRegenerate(id, platform)
+  }, [pendingGen, handleGenerateImage, handleRegenerateImage, handleSelectForProduction, handleRegenerate])
 
   const handleGenerated = useCallback(async () => {
     const res = await fetch('/api/ideas')
@@ -297,6 +312,19 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5 animate-page">
+      {pendingGen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6" onClick={() => setPendingGen(null)}>
+          <div className="w-full max-w-xs rounded-sm border border-brand-border bg-white p-6 text-center shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-1 text-base font-semibold text-brand">Generate for which platform?</h2>
+            <p className="mb-5 text-xs text-brand-muted">Meta renders 9:16. YouTube renders a 9:16 Short + a 16:9 in-stream video.</p>
+            <div className="flex gap-3">
+              <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
+              <button onClick={() => runPending('youtube')} className="btn-primary flex-1">YouTube</button>
+            </div>
+            <button onClick={() => setPendingGen(null)} className="mt-4 text-xs text-brand-muted hover:text-brand-dark">Cancel</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-brand-dark">Ideas</h1>
@@ -451,10 +479,10 @@ export function IdeasClient({ initialIdeas, latestTrend }: Props) {
                   idea={idea}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
-                  onSelectForProduction={handleSelectForProduction}
-                  onGenerateImage={handleGenerateImage}
-                  onRegenerate={handleRegenerate}
-                  onRegenerateImage={handleRegenerateImage}
+                  onSelectForProduction={(id) => setPendingGen({ id, action: 'video' })}
+                  onGenerateImage={(id) => setPendingGen({ id, action: 'image' })}
+                  onRegenerate={(id) => setPendingGen({ id, action: 'regenVideo' })}
+                  onRegenerateImage={(id) => setPendingGen({ id, action: 'regenImage' })}
                   imageGenerating={imageGenerating === idea.id}
                 />
               ))

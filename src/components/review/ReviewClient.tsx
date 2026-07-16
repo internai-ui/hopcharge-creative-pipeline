@@ -309,6 +309,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Fact label="Generator">{selected.generatorName}</Fact>
                     <Fact label="Media"><span className="capitalize">{selected.mediaType}</span></Fact>
+                    <Fact label="Platform"><span className="capitalize">{selected.platform}</span> · {selected.landscapeFilePath ? '9:16 + 16:9' : selected.aspectRatio}</Fact>
                     <Fact label="Angle"><span className="capitalize">{selected.idea.angle.replace(/_/g, ' ')}</span></Fact>
                     <Fact label="Human edited">{selected.isHumanEdited ? 'Yes' : 'No'}</Fact>
                     <Fact label="Trend"><TrendDot score={selected.idea.trendScore} warning={selected.idea.trendWarning} /></Fact>
@@ -432,6 +433,9 @@ function CreativeCard({
         <div className="absolute top-2 left-2"><StatusChip status={creative.status} /></div>
         <span className={`absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${creative.mediaType === 'image' ? 'bg-brand-accent/15 text-brand-accent' : 'bg-black/45 text-white'}`}>
           {creative.mediaType === 'image' ? 'IMG' : 'VID'}
+        </span>
+        <span className={`absolute bottom-2 left-2 text-[10px] font-semibold tracking-wide px-1.5 py-0.5 rounded text-white ${creative.platform === 'youtube' ? 'bg-red-600' : 'bg-[#1877f2]'}`}>
+          {creative.platform === 'youtube' ? 'YouTube' : 'Meta'}
         </span>
 
         {creative.status === 'generating' && (
