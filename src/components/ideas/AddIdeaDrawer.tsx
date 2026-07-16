@@ -12,13 +12,16 @@ const ANGLES = [
   'education', 'values', 'convenience', 'problem_solution', 'discovery',
 ]
 
+// Google Ads Demand Gen call-to-action enum (subset the idea generator uses).
+const YT_CTAS = ['LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'SUBSCRIBE', 'VISIT_SITE', 'GET_QUOTE']
+
 interface AddIdeaDrawerProps {
   open: boolean
   onClose: () => void
   onAdded: () => void
 }
 
-const EMPTY = { title: '', hook: '', imageVisual: '', videoVisual: '', videoFirstFrame: '', cta: '', primaryText: '', headline: '', angle: 'pain_point', trendTags: '' }
+const EMPTY = { title: '', hook: '', imageVisual: '', videoVisual: '', videoFirstFrame: '', cta: '', primaryText: '', headline: '', ytHeadlines: '', ytDescriptions: '', ytCallToAction: 'LEARN_MORE', angle: 'pain_point', trendTags: '' }
 
 export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
   const [form, setForm] = useState(EMPTY)
@@ -76,6 +79,11 @@ export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
         body: JSON.stringify({
           ...form,
           trendTags: form.trendTags.split(',').map(t => t.trim()).filter(Boolean),
+          // YouTube copy is entered one-per-line; split into the String[] the API expects.
+          // (These override the raw string values spread from `form` above.)
+          ytHeadlines: form.ytHeadlines.split('\n').map(s => s.trim()).filter(Boolean),
+          ytDescriptions: form.ytDescriptions.split('\n').map(s => s.trim()).filter(Boolean),
+          ytCallToAction: form.ytCallToAction,
         }),
       })
       if (!res.ok) {
@@ -227,6 +235,51 @@ export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
               placeholder="e.g. Charging, at your doorstep"
               className={inputCls}
             />
+          </div>
+
+          {/* ── YouTube (Demand Gen) copy ── */}
+          <div className="pt-1 flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              YouTube
+            </span>
+            <span className="text-xs text-brand-muted">Demand Gen copy - leave blank to reuse the Meta headline / primary text</span>
+          </div>
+
+          <div>
+            <label className={labelCls}>
+              YT headlines
+              <span className="text-brand-muted font-normal ml-1">- one per line, ≤40 chars each (3&ndash;5 ideal)</span>
+            </label>
+            <textarea
+              value={form.ytHeadlines}
+              onChange={set('ytHeadlines')}
+              placeholder={'Charging at your doorstep\nNo home charger? No problem\nBook a doorstep charge'}
+              rows={3}
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>
+              YT descriptions
+              <span className="text-brand-muted font-normal ml-1">- one per line, ≤90 chars each (2&ndash;4 ideal)</span>
+            </label>
+            <textarea
+              value={form.ytDescriptions}
+              onChange={set('ytDescriptions')}
+              placeholder={'We bring the charger to your door. Book a slot on WhatsApp.\nSkip public stations - charge at home, on your schedule.'}
+              rows={3}
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>YT call to action</label>
+            <select value={form.ytCallToAction} onChange={set('ytCallToAction')} className={inputCls}>
+              {YT_CTAS.map(c => (
+                <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase().replace(/^\w/, m => m.toUpperCase())}</option>
+              ))}
+            </select>
           </div>
 
           <div>

@@ -339,6 +339,43 @@ export function IdeaCard({
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headline</span>
         <div>{renderEditableText('headline')}</div>
 
+        {/* ── YouTube (Demand Gen) copy - read-only; distinct from the Meta copy above ── */}
+        <div className="col-span-2 mt-1.5 pt-2.5 border-t border-brand-border/70 flex items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+            YouTube
+          </span>
+          <span className="text-[11px] text-brand-muted">Demand Gen copy</span>
+        </div>
+
+        <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headlines</span>
+        <div className="space-y-0.5">
+          {idea.ytHeadlines.length ? (
+            idea.ytHeadlines.map((h, i) => (
+              <div key={i} className="text-sm text-brand-dark leading-snug">
+                {h} <span className="text-[10px] text-brand-muted">({h.length})</span>
+              </div>
+            ))
+          ) : (
+            <span className="text-sm text-brand-muted italic">—</span>
+          )}
+        </div>
+
+        <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Descs</span>
+        <div className="space-y-0.5">
+          {idea.ytDescriptions.length ? (
+            idea.ytDescriptions.map((d, i) => (
+              <div key={i} className="text-sm text-brand-dark leading-snug">
+                {d} <span className="text-[10px] text-brand-muted">({d.length})</span>
+              </div>
+            ))
+          ) : (
+            <span className="text-sm text-brand-muted italic">—</span>
+          )}
+        </div>
+
+        <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">YT CTA</span>
+        <div className="text-sm text-brand-dark">{idea.ytCallToAction?.replace(/_/g, ' ').toLowerCase() ?? '—'}</div>
+
         {/* Angle - custom dropdown trigger */}
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Angle</span>
         <div className="flex items-center">
