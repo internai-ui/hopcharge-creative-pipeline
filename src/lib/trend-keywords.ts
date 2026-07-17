@@ -40,15 +40,23 @@ export async function ensureSeeded(): Promise<void> {
 }
 
 // Keywords grouped by lens (every lens key present, possibly empty). Seeds on first
-// use so the trend job and the UI always agree.
+// use so the trend job and the UI always agree. Falls back to the hardcoded defaults
+// if the DB read fails (table not yet pushed, Prisma client not regenerated, DB down)
+// so a missing keyword table can NEVER break the trend refresh.
 export async function getTrendKeywordGroups(): Promise<Record<Lens, string[]>> {
-  await ensureSeeded()
-  const rows = await prisma.trendKeyword.findMany({ orderBy: { createdAt: 'asc' } })
-  const groups = Object.fromEntries(LENS_KEYS.map((k) => [k, [] as string[]])) as Record<Lens, string[]>
-  for (const r of rows) {
-    if (isLens(r.lens)) groups[r.lens].push(r.term)
+  try {
+    await ensureSeeded()
+    const rows = await prisma.trendKeyword.findMany({ orderBy: { createdAt: 'asc' } })
+    const groups = Object.fromEntries(LENS_KEYS.map((k) => [k, [] as string[]])) as Record<Lens, string[]>
+    for (const r of rows) {
+      if (isLens(r.lens)) groups[r.lens].push(r.term)
+    }
+    const total = Object.values(groups).reduce((n, a) => n + a.length, 0)
+    return total > 0 ? groups : { ...DEFAULT_GROUPS }
+  } catch (err) {
+    console.warn('[trend-keywords] keyword table read failed, using default taxonomy:', err)
+    return { ...DEFAULT_GROUPS }
   }
-  return groups
 }
 
 // Flat list of every keyword across lenses (what the fetcher queries).
