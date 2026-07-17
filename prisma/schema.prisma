@@ -278,3 +278,17 @@ model HistoricalAd {
   @@index([isSuccessful])
   @@index([cpl])
 }
+
+// User-editable Google Trends keyword taxonomy. Seeded once from the hardcoded
+// defaults in src/lib/trend-topics.ts (see src/lib/trend-keywords.ts). Once seeded,
+// this table is the source of truth: the trend job reads keywords from here, and the
+// Trends page lets the marketer add/remove them per lens.
+model TrendKeyword {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  lens      String   // demand | charging | lifestyle | format
+  term      String
+
+  @@unique([lens, term])
+  @@index([lens])
+}

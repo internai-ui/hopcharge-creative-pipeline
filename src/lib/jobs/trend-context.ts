@@ -3,10 +3,8 @@ import { Prisma } from '@prisma/client'
 import { getTrendData, getWebSearch, getAdLibrary } from '@/lib/plugins/registry'
 import { anthropic as client } from '@/lib/anthropic'
 import { extractJsonObject } from '@/lib/json'
-import {
-  DEMAND_TOPICS, CHARGING_TOPICS, LIFESTYLE_TOPICS, CONTENT_FORMAT_TOPICS,
-  TOPIC_GROUPS, ALL_TOPICS, TRENDS_ANCHOR,
-} from '@/lib/trend-topics'
+import { TRENDS_ANCHOR } from '@/lib/trend-topics'
+import { getTrendKeywordGroups, type Lens } from '@/lib/trend-keywords'
 
 // Shape Claude returns for the synthesized trend context (see synthesisPrompt).
 interface TrendAnalysis {
@@ -57,9 +55,9 @@ type TrendData = { scores: Record<string, number>; risingTopics: string[]; decli
 // 0-1 scale where 1.0 = the most-searched topic in that lens. This is what makes
 // staleness meaningful for a niche business: an idea is only "stale" if it rides
 // topics that are cold *relative to its peers*, not merely low in absolute volume.
-function relativeScoresByGroup(rawScores: Record<string, number>): Record<string, number> {
+function relativeScoresByGroup(rawScores: Record<string, number>, groups: Record<string, string[]>): Record<string, number> {
   const out: Record<string, number> = {}
-  for (const topics of Object.values(TOPIC_GROUPS)) {
+  for (const topics of Object.values(groups)) {
     const groupMax = Math.max(0, ...topics.map((t) => rawScores[t] ?? 0))
     for (const t of topics) {
       out[t] = groupMax > 0 ? Math.min(1, Math.max(0, (rawScores[t] ?? 0) / groupMax)) : 0
@@ -92,9 +90,10 @@ async function latestFullFormatTrends(): Promise<FormatTrend[] | null> {
 function buildLiteAnalysis(
   trendData: TrendData,
   region: string,
+  groups: Record<Lens, string[]>,
   formatTrends: FormatTrend[] = AD_FORMAT_BASELINE,
 ): TrendAnalysis {
-  const topicScores = relativeScoresByGroup(trendData.scores)
+  const topicScores = relativeScoresByGroup(trendData.scores, groups)
 
   // Rising / declining are derived from the same relative model used for staleness,
   // so the page and the idea scores tell one consistent story.
@@ -149,10 +148,15 @@ export async function runTrendContext(mode: TrendMode = (process.env.TREND_MODE 
   try {
     const trendPlugin = getTrendData()
 
+    // The keyword taxonomy is user-editable (Trends page); read it from the DB,
+    // seeded from the hardcoded defaults on first use. Falls back to defaults if empty.
+    const groups = await getTrendKeywordGroups()
+    const allTopics = Object.values(groups).flat()
+
     // 1. Google Trends - region from TRENDS_REGION (free, no AI, no API key).
     // Pass the anchor so scores from the separate 5-keyword chunks are comparable.
     const region = process.env.TRENDS_REGION ?? 'IN'
-    const trendData = await trendPlugin.fetchTrends({ topics: ALL_TOPICS, region, anchor: TRENDS_ANCHOR })
+    const trendData = await trendPlugin.fetchTrends({ topics: allTopics, region, anchor: TRENDS_ANCHOR })
 
     let analysis: TrendAnalysis
     let searchResults: { title: string; snippet: string; url: string }[][] = []
@@ -171,7 +175,7 @@ export async function runTrendContext(mode: TrendMode = (process.env.TREND_MODE 
       // carry over from the most recent full refresh (baseline only if none has run),
       // so a quick refresh updates topic scores without erasing real format insight.
       const carriedFormats = await latestFullFormatTrends()
-      analysis = buildLiteAnalysis(trendData, region, carriedFormats ?? AD_FORMAT_BASELINE)
+      analysis = buildLiteAnalysis(trendData, region, groups, carriedFormats ?? AD_FORMAT_BASELINE)
     } else {
       // Full mode: live web search + competitor ads + Claude synthesis (uses the Anthropic key).
       const searchPlugin = getWebSearch()
@@ -199,17 +203,17 @@ Your job: identify what is ACTUALLY trending right now and how Hopcharge can mak
 ## Google Trends - India (0-100 relative interest within each lens, last 90 days)
 ${(() => {
   // Scores are relative to the hottest topic in each lens, so they're comparable.
-  const rel = relativeScoresByGroup(trendData.scores)
+  const rel = relativeScoresByGroup(trendData.scores, groups)
   const fmt = (t: string) => `${t}: ${Math.round((rel[t] ?? 0) * 100)}`
   return [
     '### EV Demand Topics',
-    DEMAND_TOPICS.map(fmt).join('\n'),
+    groups.demand.map(fmt).join('\n'),
     '\n### Charging Problem Topics',
-    CHARGING_TOPICS.map(fmt).join('\n'),
+    groups.charging.map(fmt).join('\n'),
     '\n### Lifestyle / Purchase Topics (signals Hopcharge can piggyback on)',
-    LIFESTYLE_TOPICS.map(fmt).join('\n'),
+    groups.lifestyle.map(fmt).join('\n'),
     '\n### Content Format Topics (audience interest, not ad performance)',
-    CONTENT_FORMAT_TOPICS.map(fmt).join('\n'),
+    groups.format.map(fmt).join('\n'),
   ].join('\n')
 })()}
 

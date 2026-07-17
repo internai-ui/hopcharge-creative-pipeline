@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { TrendContext } from '@prisma/client'
 import { CONTENT_FORMAT_TOPICS } from '@/lib/trend-topics'
+import { KeywordManager } from './KeywordManager'
 
 type IdeaScore = {
   id: string; title: string; trendTags: string[]
@@ -24,6 +25,13 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
   const [ideaScores, setIdeaScores] = useState<IdeaScore[]>(initialScores)
   const [refreshing, setRefreshing] = useState<false | 'lite' | 'full'>(false)
   const [refreshError, setRefreshError] = useState('')
+  // Format-lens keywords are user-editable; the KeywordManager reports the live set
+  // so the "content-format demand" widget reflects custom terms (falls back to defaults).
+  const [formatTerms, setFormatTerms] = useState<string[]>(CONTENT_FORMAT_TOPICS)
+  const handleFormatTerms = useCallback(
+    (terms: string[]) => setFormatTerms(terms.length ? terms : CONTENT_FORMAT_TOPICS),
+    [],
+  )
 
   const latest = trendContexts[0] as (TrendContext & {
     risingTopics: RisingTopic[]
@@ -98,10 +106,10 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
   // ranked hottest-first. A search-interest proxy, not ad performance.
   const formatInterest = useMemo(() => {
     const scores = (latest?.topicScores ?? {}) as Record<string, number>
-    return CONTENT_FORMAT_TOPICS
+    return formatTerms
       .map((topic) => ({ topic, score: scores[topic] ?? 0 }))
       .sort((a, b) => b.score - a.score)
-  }, [latest])
+  }, [latest, formatTerms])
 
   const noTrendsData = useMemo(() => {
     if (!latest?.topicScores) return false
@@ -152,6 +160,8 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
           <span>{refreshError}</span>
         </div>
       )}
+
+      <KeywordManager onFormatTermsChange={handleFormatTerms} />
 
       {!latest ? (
         <div className="bg-white border border-brand-border rounded-xl p-12 text-center text-brand-muted">
