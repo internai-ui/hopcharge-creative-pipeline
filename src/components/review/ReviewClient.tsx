@@ -604,6 +604,28 @@ function Dropzone({
   )
 }
 
+// Recommended Higgsfield model per media type + whether the recurring customer
+// character "Sara" appears. Sara needs Soul ID (Higgsfield's character-consistency
+// feature) so her face stays consistent; non-Sara creatives use Higgsfield's best
+// general models. Video is made as a start frame (still) + a motion pass, so it names
+// both. Models verified against higgsfield.ai (Soul 2.0 / Soul Cinema / Soul ID /
+// Nano Banana Pro; video models Veo 3.1 / Kling 3.0 / Seedance).
+function higgsfieldGuidance(mediaType: string, featuresSara: boolean): {
+  soulId: boolean
+  frame: string
+  motion?: string
+  why: string
+} {
+  if (mediaType === 'image') {
+    return featuresSara
+      ? { soulId: true, frame: 'Soul 2.0', why: 'Sara appears — turn Soul ID on so her face stays consistent across generations.' }
+      : { soulId: false, frame: 'Nano Banana Pro', why: 'No recurring character — use Higgsfield’s best general image model.' }
+  }
+  return featuresSara
+    ? { soulId: true, frame: 'Soul Cinema', motion: 'Veo 3.1 or Kling 3.0', why: 'Sara appears — build the start frame in Soul Cinema with Soul ID on, then animate; Soul ID carries her identity into the video.' }
+    : { soulId: false, frame: 'Nano Banana Pro (or Soul 2.0)', motion: 'Veo 3.1 or Kling 3.0', why: 'No recurring character — use Higgsfield’s best general models.' }
+}
+
 // ── Manual generation panel (shown for `awaiting_upload` creatives) ────────────
 // No generation API is configured (IMAGE_GENERATOR / VIDEO_GENERATOR = manual), so
 // we hand the user the exact prompt + config to paste into Higgsfield, then they
@@ -629,12 +651,15 @@ function ManualGenPanel({ manual, mediaType }: { manual: ManualMeta | null; medi
     )
   }
 
+  const featuresSara = /\bsara\b/i.test(`${manual.prompt} ${manual.firstFramePrompt ?? ''}`)
+  const g = higgsfieldGuidance(mediaType, featuresSara)
+
   return (
     <div className="flex-1 flex flex-col gap-4 min-h-[280px] overflow-y-auto">
       <div>
         <h3 className="text-sm font-semibold text-brand-dark">Generate this {kind} manually</h3>
         <p className="text-xs text-brand-muted mt-0.5">
-          Copy the prompt → generate on Higgsfield → upload the result from the panel on the right.
+          Copy the prompt → generate on Higgsfield (use the model below) → upload the result from the panel on the right.
         </p>
       </div>
 
@@ -644,8 +669,31 @@ function ManualGenPanel({ manual, mediaType }: { manual: ManualMeta | null; medi
         ))}
       </div>
 
+      {/* Which Higgsfield model to use (Sara → Soul + Soul ID; else best general). */}
+      <div className="rounded-xl bg-brand-surface/60 ring-1 ring-brand-border p-3 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-muted">Higgsfield settings</span>
+          {g.soulId && (
+            <span className="inline-flex items-center rounded-full bg-brand text-white text-[10px] font-semibold px-2 py-0.5" title="Higgsfield's character-consistency feature - keeps Sara's face identical across generations">
+              Soul ID: ON
+            </span>
+          )}
+        </div>
+        {mediaType === 'video' ? (
+          <div className="text-xs text-brand-dark space-y-0.5">
+            <p><span className="text-brand-muted">Start frame:</span> <span className="font-medium">{g.frame}</span>{g.soulId ? ' + Soul ID' : ''}</p>
+            <p><span className="text-brand-muted">Animate:</span> <span className="font-medium">{g.motion}</span></p>
+          </div>
+        ) : (
+          <p className="text-xs text-brand-dark">
+            <span className="text-brand-muted">Model:</span> <span className="font-medium">{g.frame}</span>{g.soulId ? ' + Soul ID' : ''}
+          </p>
+        )}
+        <p className="text-[11px] text-brand-muted">{g.why}</p>
+      </div>
+
       <PromptBlock
-        label={kind === 'video' ? 'Video prompt' : 'Image prompt'}
+        label={kind === 'video' ? 'Video prompt (motion)' : 'Image prompt'}
         text={manual.prompt}
         copied={copied === 'prompt'}
         onCopy={() => copy('prompt', manual.prompt)}
@@ -653,7 +701,7 @@ function ManualGenPanel({ manual, mediaType }: { manual: ManualMeta | null; medi
 
       {manual.firstFramePrompt && (
         <PromptBlock
-          label="Opening-frame prompt (for image→video)"
+          label="Start-frame prompt (Higgsfield “Start Frame”)"
           text={manual.firstFramePrompt}
           copied={copied === 'frame'}
           onCopy={() => copy('frame', manual.firstFramePrompt!)}
