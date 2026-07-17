@@ -473,8 +473,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
       {/* Preview modal */}
       {previewCreative && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${previewClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
-          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 overlay-backdrop ${previewClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
           onClick={(e) => { if (e.target === e.currentTarget) closePreview() }}
         >
           <div className={`bg-gray-950 border border-gray-800 rounded-2xl overflow-hidden shadow-2xl w-full max-w-sm ${previewClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
@@ -521,8 +520,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
 
       {confirmCreative && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center ${modalClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
-          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          className={`fixed inset-0 z-50 flex items-center justify-center overlay-backdrop ${modalClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
           onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}
         >
           <div className={`bg-white border border-brand-border rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>

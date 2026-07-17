@@ -110,7 +110,7 @@ export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
     <div className="fixed inset-0 z-50 flex">
       {/* Full-viewport backdrop */}
       <div
-        className={`absolute inset-0 bg-black/40 cursor-pointer ${exiting ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
+        className={`absolute inset-0 overlay-backdrop cursor-pointer ${exiting ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
         onClick={onClose}
       />
 

@@ -171,6 +171,21 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
   // the choice is passed into the generation call so the creative is built for it
   // (aspect ratio + which publisher it later goes to).
   const [pendingGen, setPendingGen] = useState<{ id: string; action: 'image' | 'regenImage' | 'video' | 'regenVideo' } | null>(null)
+  const [pickerClosing, setPickerClosing] = useState(false)
+
+  // Close the picker with the same fade/scale-out the other modals use.
+  const closePicker = useCallback(() => {
+    setPickerClosing(true)
+    setTimeout(() => { setPendingGen(null); setPickerClosing(false) }, 200)
+  }, [])
+
+  // Esc closes the picker, matching every other modal on the site.
+  useEffect(() => {
+    if (!pendingGen) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closePicker() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [pendingGen, closePicker])
 
   const handleGenerateImage = useCallback(async (id: string, platform: string) => {
     setGenerationError(null)
@@ -343,15 +358,18 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5 animate-page">
       {pendingGen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-overlay" onClick={() => setPendingGen(null)}>
-          <div className="w-full max-w-sm rounded-2xl border border-brand-border bg-white p-6 text-center shadow-2xl animate-modal-in" onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center overlay-backdrop px-6 ${pickerClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
+          onClick={(e) => { if (e.target === e.currentTarget) closePicker() }}
+        >
+          <div className={`w-full max-w-sm rounded-2xl border border-brand-border bg-white p-6 text-center shadow-2xl ${pickerClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <h2 className="mb-1 text-base font-semibold text-brand">Generate for which platform?</h2>
             <p className="mb-5 text-xs text-brand-muted">Meta renders 9:16. YouTube renders a 9:16 Short + a 16:9 in-stream video.</p>
             <div className="flex gap-3">
               <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
               <button onClick={() => runPending('youtube')} className="btn-primary flex-1">YouTube</button>
             </div>
-            <button onClick={() => setPendingGen(null)} className="mt-4 text-xs text-brand-muted hover:text-brand-dark">Cancel</button>
+            <button onClick={closePicker} className="mt-4 text-xs text-brand-muted hover:text-brand-dark">Cancel</button>
           </div>
         </div>
       )}

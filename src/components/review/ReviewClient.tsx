@@ -268,8 +268,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
       {/* ── Detail modal ── */}
       {selected && (
         <div
-          className={`fixed inset-0 z-50 flex items-start justify-center p-4 overflow-auto ${modalClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
-          style={{ backgroundColor: 'rgba(15,18,40,0.55)', backdropFilter: 'blur(2px)' }}
+          className={`fixed inset-0 z-50 flex items-start justify-center p-4 overflow-auto overlay-backdrop ${modalClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
           onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}
         >
           <div className={`bg-white rounded-2xl w-full mt-6 overflow-hidden shadow-2xl shadow-brand-darker/20 ring-1 ring-brand-border ${selected.editedFilePath ? 'max-w-5xl' : 'max-w-4xl'} ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>

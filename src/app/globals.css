@@ -144,6 +144,12 @@ select.input { appearance: none; cursor: pointer; }
   animation: slide-out-right 0.22s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }
 
+/* ── Shared overlay backdrop - one dim/blur for every modal & drawer ── */
+.overlay-backdrop {
+  background-color: rgba(15, 18, 40, 0.55);
+  backdrop-filter: blur(2px);
+}
+
 /* ── Overlay/backdrop fade-in / fade-out ── */
 @keyframes fade-overlay {
   from { opacity: 0; }
