@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DndContext,
   closestCenter,
@@ -172,6 +173,9 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
   // (aspect ratio + which publisher it later goes to).
   const [pendingGen, setPendingGen] = useState<{ id: string; action: 'image' | 'regenImage' | 'video' | 'regenVideo' } | null>(null)
   const [pickerClosing, setPickerClosing] = useState(false)
+  // Portal target guard - createPortal needs document, absent during SSR.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   // Close the picker with the same fade/scale-out the other modals use.
   const closePicker = useCallback(() => {
@@ -357,7 +361,7 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5 animate-page">
-      {pendingGen && (
+      {mounted && pendingGen && createPortal(
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center overlay-backdrop px-6 ${pickerClosing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
           onClick={(e) => { if (e.target === e.currentTarget) closePicker() }}
@@ -371,7 +375,8 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
             </div>
             <button onClick={closePicker} className="mt-4 text-xs text-brand-muted hover:text-brand-dark">Cancel</button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
       <div className="flex items-start justify-between">
         <div>
