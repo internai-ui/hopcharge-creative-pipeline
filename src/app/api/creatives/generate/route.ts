@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     // YouTube "both": also render a 16:9 in-stream rendition alongside the 9:16
     // Shorts video; both ship as assets in one Demand Gen responsive ad. Best-effort
-    // — if the landscape submit fails we still publish the Shorts version.
+    // - if the landscape submit fails we still publish the Shorts version.
     let landscapeJobId: string | undefined
     if (targetPlatform === 'youtube') {
       try {

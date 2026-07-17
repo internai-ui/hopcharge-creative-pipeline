@@ -618,12 +618,12 @@ function higgsfieldGuidance(mediaType: string, featuresSara: boolean): {
 } {
   if (mediaType === 'image') {
     return featuresSara
-      ? { soulId: true, frame: 'Soul 2.0', why: 'Sara appears — turn Soul ID on so her face stays consistent across generations.' }
-      : { soulId: false, frame: 'Nano Banana Pro', why: 'No recurring character — use Higgsfield’s best general image model.' }
+      ? { soulId: true, frame: 'Soul 2.0', why: 'Sara appears - turn Soul ID on so her face stays consistent across generations.' }
+      : { soulId: false, frame: 'Nano Banana Pro', why: 'No recurring character - use Higgsfield’s best general image model.' }
   }
   return featuresSara
-    ? { soulId: true, frame: 'Soul Cinema', motion: 'Veo 3.1 or Kling 3.0', why: 'Sara appears — build the start frame in Soul Cinema with Soul ID on, then animate; Soul ID carries her identity into the video.' }
-    : { soulId: false, frame: 'Nano Banana Pro (or Soul 2.0)', motion: 'Veo 3.1 or Kling 3.0', why: 'No recurring character — use Higgsfield’s best general models.' }
+    ? { soulId: true, frame: 'Soul Cinema', motion: 'Veo 3.1 or Kling 3.0', why: 'Sara appears - build the start frame in Soul Cinema with Soul ID on, then animate; Soul ID carries her identity into the video.' }
+    : { soulId: false, frame: 'Nano Banana Pro (or Soul 2.0)', motion: 'Veo 3.1 or Kling 3.0', why: 'No recurring character - use Higgsfield’s best general models.' }
 }
 
 // ── Manual generation panel (shown for `awaiting_upload` creatives) ────────────

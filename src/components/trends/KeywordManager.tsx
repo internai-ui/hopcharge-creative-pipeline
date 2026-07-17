@@ -15,7 +15,7 @@ function Chevron({ open }: { open: boolean }) {
 
 // Editable Google Trends keyword taxonomy. The trend job reads these from the DB, so
 // edits apply on the next refresh. Trends is a weak, supplementary signal (search
-// interest, not ad performance) — this just lets the marketer keep it relevant.
+// interest, not ad performance) - this just lets the marketer keep it relevant.
 export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: (terms: string[]) => void }) {
   const [lenses, setLenses] = useState<LensMeta[]>([])
   const [groups, setGroups] = useState<Record<string, KW[]>>({})
@@ -85,7 +85,7 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
           <div className="px-5 pb-5 pt-4 border-t border-brand-border space-y-5">
             <p className="text-xs text-brand-muted">
               Google Trends is a <span className="font-medium">supplementary nudge</span> (search interest, not ad
-              performance) — your Meta CPL data drives real decisions. Keep these terms relevant to what you care about.
+              performance) - your Meta CPL data drives real decisions. Keep these terms relevant to what you care about.
             </p>
 
             {error && (
@@ -108,7 +108,7 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
                     </span>
                   ))}
                   {(groups[l.key]?.length ?? 0) === 0 && (
-                    <span className="text-xs text-brand-muted italic">No keywords — this lens is skipped on refresh.</span>
+                    <span className="text-xs text-brand-muted italic">No keywords - this lens is skipped on refresh.</span>
                   )}
                 </div>
 

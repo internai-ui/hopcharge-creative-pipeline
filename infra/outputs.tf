@@ -1,5 +1,5 @@
 # Values below map directly onto the app's env vars. Sensitive ones are hidden by
-# default — reveal with `terraform output -raw <name>`.
+# default - reveal with `terraform output -raw <name>`.
 
 output "s3_bucket" {
   description = "AWS_S3_BUCKET"

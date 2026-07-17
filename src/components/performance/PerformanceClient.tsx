@@ -450,7 +450,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
         // Surface the underlying reason (e.g. an invalid Meta token) when a timing
         // sync failed, instead of a silent "0 ads" with no explanation.
         const tErr = timing?.errors && timing?.lastError
-          ? ` — ${String(timing.lastError).slice(0, 160)}`
+          ? ` - ${String(timing.lastError).slice(0, 160)}`
           : ''
         setSyncMsg(`Last synced ${new Date().toLocaleTimeString()}${tInfo}${tErr}`)
       }

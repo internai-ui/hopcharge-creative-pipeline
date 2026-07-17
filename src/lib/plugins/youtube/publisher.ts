@@ -13,13 +13,13 @@ import { storage } from '@/lib/storage'
 //   3. Wrap each as a YoutubeVideoAsset (assets:mutate).
 //   4. Create a PAUSED DemandGenVideoResponsiveAd (adGroupAds:mutate) with the
 //      video(s) + a required logo asset + business name + several headlines /
-//      descriptions + a CTA — the "draft".
+//      descriptions + a CTA - the "draft".
 //
 // Feature parity with MetaPublisher:
 //   • funnel stage → ad group. Meta maps funnel to an optimization goal + campaign;
 //     Demand Gen keeps audience/bidding on the campaign+ad group, so we select a
 //     per-funnel ad group (GOOGLE_ADS_AD_GROUP_ID_{TOF,MOF,BOF}, fallback the
-//     default) — the operator sets those up once with the right audience signals,
+//     default) - the operator sets those up once with the right audience signals,
 //     exactly like META_CAMPAIGN_ID_REACH / _CONVERSATIONS.
 //   • responsive copy: multiple ytHeadlines (<=40) + ytDescriptions (<=90) + CTA.
 //   • "both" aspect ratios: portrait (9:16, originalFilePath) + optional landscape
@@ -29,7 +29,7 @@ import { storage } from '@/lib/storage'
 //
 // Requires (see .env.example): the GOOGLE_ADS_* credentials, a per-funnel (or single)
 // Demand Gen ad group, and GOOGLE_ADS_LOGO_ASSET_ID (a 1:1 logo image asset the
-// operator uploads once — Demand Gen requires a logo, and it must be a raster 1:1,
+// operator uploads once - Demand Gen requires a logo, and it must be a raster 1:1,
 // not the app's SVG).
 
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -278,7 +278,7 @@ export class YouTubePublisher implements PublisherPlugin {
     })
   }
 
-  // Budget lives on the Demand Gen campaign, not the ad — adjust it in the Google
+  // Budget lives on the Demand Gen campaign, not the ad - adjust it in the Google
   // Ads UI. Kept for interface parity with Meta.
   async scale(_externalPostId: string, _budgetMultiplier: number): Promise<void> {
     return

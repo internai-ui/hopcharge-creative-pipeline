@@ -6,7 +6,7 @@
 #
 # The app talks to this via the AWS_* env vars in .env.local (STORAGE_TYPE=s3).
 # To go to production, leave the code untouched and point those same env vars at
-# Cloudflare R2 — see .env.example for the exact values.
+# Cloudflare R2 - see .env.example for the exact values.
 services:
   minio:
     image: minio/minio:latest

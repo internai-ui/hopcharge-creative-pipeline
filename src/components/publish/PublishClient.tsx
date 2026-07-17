@@ -541,7 +541,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
               <span className={`inline-flex items-center text-sm font-semibold px-2.5 py-1 rounded text-white ${confirmCreative?.platform === 'youtube' ? 'bg-red-600' : 'bg-[#1877f2]'}`}>
                 {confirmCreative?.platform === 'youtube' ? 'YouTube' : 'Meta'}
               </span>
-              <p className="mt-1 text-xs text-brand-muted">Chosen when the creative was generated — publishes to its own platform.</p>
+              <p className="mt-1 text-xs text-brand-muted">Chosen when the creative was generated - publishes to its own platform.</p>
             </div>
 
             <div>
@@ -557,7 +557,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 </button>
               </div>
               <p className="mt-1 text-xs text-brand-muted">
-                {draft ? 'Saves a PAUSED draft on the platform — nothing goes live or spends.' : 'Publishes a LIVE ad — it will serve and spend budget.'}
+                {draft ? 'Saves a PAUSED draft on the platform - nothing goes live or spends.' : 'Publishes a LIVE ad - it will serve and spend budget.'}
               </p>
             </div>
 

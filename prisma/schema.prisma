@@ -181,9 +181,9 @@ enum IdeaSourceType {
 }
 
 // Marketing funnel stage an idea targets:
-//   TOF — top of funnel (awareness / broad reach)
-//   MOF — middle of funnel (consideration / nurture)
-//   BOF — bottom of funnel (conversion / direct response)
+//   TOF - top of funnel (awareness / broad reach)
+//   MOF - middle of funnel (consideration / nurture)
+//   BOF - bottom of funnel (conversion / direct response)
 enum FunnelStage {
   TOF
   MOF

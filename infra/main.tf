@@ -72,7 +72,7 @@ resource "aws_s3_bucket" "creatives" {
   bucket = "${var.s3_bucket_prefix}-${random_id.bucket.hex}"
 }
 
-# Fully private — the app hands out short-lived presigned URLs, so nothing is public.
+# Fully private - the app hands out short-lived presigned URLs, so nothing is public.
 resource "aws_s3_bucket_public_access_block" "creatives" {
   bucket                  = aws_s3_bucket.creatives.id
   block_public_acls       = true

@@ -57,7 +57,7 @@ variable "postgres_version" {
 variable "db_allowed_cidrs" {
   description = <<-EOT
     CIDRs allowed to reach Postgres on 5432. Vercel Hobby has no static egress IPs,
-    so this defaults to open — the 32-char generated password + required TLS are the
+    so this defaults to open - the 32-char generated password + required TLS are the
     protection. Narrow it if all your DB clients have known IPs.
   EOT
   type        = list(string)

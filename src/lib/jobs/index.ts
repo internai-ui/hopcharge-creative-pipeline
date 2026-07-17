@@ -90,8 +90,8 @@ export async function getBoss(): Promise<PgBoss> {
   return globalForBoss.boss
 }
 
-// Run a job and log a pipeline issue if it throws, so every failure — whether it
-// came from the scheduler, Vercel Cron, or a manual run — surfaces in the
+// Run a job and log a pipeline issue if it throws, so every failure - whether it
+// came from the scheduler, Vercel Cron, or a manual run - surfaces in the
 // Evaluation tab instead of only in server logs. Re-throws so the caller still
 // sees the failure. QuickRefreshDiscardedError is an intentional empty lite trend
 // refresh, not a failure, so it is left unlogged.

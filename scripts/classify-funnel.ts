@@ -43,9 +43,9 @@ async function main() {
   const prompt = `You are a performance-marketing strategist for Hopcharge, an on-demand EV charging subscription service in India (NCR). Classify each ad idea below into ONE marketing funnel stage.
 
 Definitions:
-- TOF (Top of Funnel — Awareness): Broad reach, problem-aware or emotional/educational/lifestyle content for people who may not know Hopcharge or even be EV owners yet. No hard sell. Goal: attention & awareness. Signals: storytelling, "did you know", myths, trends, lifestyle, sustainability, broad EV education.
-- MOF (Middle of Funnel — Consideration): For people weighing whether Hopcharge is right for them. Benefits, cost comparisons, how-it-works, social proof, testimonials, addressing objections. Goal: nurture & build trust. Signals: "₹X/km math", comparisons, "here's how", proof, partnerships, feature explainers.
-- BOF (Bottom of Funnel — Conversion): For people ready to act. Direct response, pricing, plans, offers, urgency, strong booking CTA. Goal: convert now. Signals: "book now", "see plans", pricing mentioned, "subscribe", "included with your plan".
+- TOF (Top of Funnel - Awareness): Broad reach, problem-aware or emotional/educational/lifestyle content for people who may not know Hopcharge or even be EV owners yet. No hard sell. Goal: attention & awareness. Signals: storytelling, "did you know", myths, trends, lifestyle, sustainability, broad EV education.
+- MOF (Middle of Funnel - Consideration): For people weighing whether Hopcharge is right for them. Benefits, cost comparisons, how-it-works, social proof, testimonials, addressing objections. Goal: nurture & build trust. Signals: "₹X/km math", comparisons, "here's how", proof, partnerships, feature explainers.
+- BOF (Bottom of Funnel - Conversion): For people ready to act. Direct response, pricing, plans, offers, urgency, strong booking CTA. Goal: convert now. Signals: "book now", "see plans", pricing mentioned, "subscribe", "included with your plan".
 
 Use the hook and CTA as the strongest signals.
 

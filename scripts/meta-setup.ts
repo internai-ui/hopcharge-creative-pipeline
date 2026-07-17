@@ -68,7 +68,7 @@ async function main() {
       patchEnv('META_PAGE_ID', page.id)
       console.log(`✅  META_PAGE_ID set to ${page.id} (${page.name})`)
     } else {
-      console.log('\nMultiple pages found — pick one and set META_PAGE_ID manually:')
+      console.log('\nMultiple pages found - pick one and set META_PAGE_ID manually:')
       for (const p of pagesData.data) {
         console.log(`   ${p.id}  ${p.name}`)
       }

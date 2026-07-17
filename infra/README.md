@@ -1,4 +1,4 @@
-# infra — AWS provisioning (Terraform)
+# infra - AWS provisioning (Terraform)
 
 Stands up everything the app needs on AWS, in **one `terraform apply`**, in a
 **dedicated VPC** (no reliance on a default VPC), in **us-east-1** by default (next
@@ -9,7 +9,7 @@ to Vercel's `iad1` functions):
   that bucket. Bucket name gets a random suffix so it's always globally unique.
 - **RDS PostgreSQL** (public, TLS) with a generated 32-char password.
 
-> This is meant to be run by whoever holds AWS credentials. It needs **no input** —
+> This is meant to be run by whoever holds AWS credentials. It needs **no input** -
 > just `init` then `apply`. When it finishes, send back the one `env_for_vercel`
 > block (last section) and you're done.
 
@@ -20,7 +20,7 @@ to Vercel's `iad1` functions):
   `AWS_SECRET_ACCESS_KEY` env vars) for an identity allowed to create: **VPC,
   subnets, internet gateway, route tables, security groups, S3, IAM user/policy/
   access key, and RDS**. An account admin has all of these.
-- Nothing else — no variables need to be set (defaults are sensible).
+- Nothing else - no variables need to be set (defaults are sensible).
 
 ## Run it
 
@@ -51,7 +51,7 @@ AWS_SECRET_ACCESS_KEY=...
 DATABASE_URL=postgresql://hopcharge:...@...rds.amazonaws.com:5432/hopcharge?sslmode=require
 ```
 
-Send that block back — those six values are everything the app needs. (They also go
+Send that block back - those six values are everything the app needs. (They also go
 straight into **Vercel → Settings → Environment Variables**.)
 
 ## One more step after the env vars are set
@@ -71,12 +71,12 @@ DATABASE_URL="postgresql://hopcharge:...@...:5432/hopcharge?sslmode=require" npx
   `terraform.tfvars` before applying.
 - **Cost:** `db.t4g.micro` + 20 GB is free-tier-eligible for 12 months in most
   regions, ~$12–15/mo after. S3 is a few cents per GB. The VPC/IGW/subnets are free.
-- **State:** `terraform.tfstate` holds the DB password + access key in plaintext —
+- **State:** `terraform.tfstate` holds the DB password + access key in plaintext -
   it's gitignored. For a team, move state to an S3 backend.
 - **Tear down:** `terraform destroy` (with the default `db_skip_final_snapshot =
-  true` this deletes the DB with no backup — set it to `false` first to keep one).
+  true` this deletes the DB with no backup - set it to `false` first to keep one).
 
 ## Variables
 
-All optional — see `variables.tf`. Common ones: `aws_region`, `s3_bucket_prefix`,
+All optional - see `variables.tf`. Common ones: `aws_region`, `s3_bucket_prefix`,
 `db_instance_class`, `db_allowed_cidrs`, `db_deletion_protection`.

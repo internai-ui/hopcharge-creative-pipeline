@@ -19,7 +19,7 @@ export default function AppError({
         </div>
         <h1 className="mb-2 text-lg font-semibold text-brand">Couldn&rsquo;t load this page</h1>
         <p className="mb-6 text-sm text-brand-muted">
-          We couldn&rsquo;t reach the data service just now. This is usually temporary &mdash;
+          We couldn&rsquo;t reach the data service just now. This is usually temporary -
           try again in a moment.
         </p>
         <button onClick={reset} className="btn-primary">

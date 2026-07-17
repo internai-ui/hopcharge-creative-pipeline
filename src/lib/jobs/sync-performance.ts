@@ -12,7 +12,7 @@ export async function syncPerformance(): Promise<void> {
   await reconcilePosts()
 
   // All live posts across platforms. Each platform is synced with its OWN analytics
-  // plugin — Meta via the Graph insights API, YouTube via Google Ads reporting —
+  // plugin - Meta via the Graph insights API, YouTube via Google Ads reporting -
   // resolved by getAnalytics(platform), mirroring getPublisher(platform).
   const posts = await prisma.post.findMany({
     where: { status: 'posted', externalPostId: { not: null } },

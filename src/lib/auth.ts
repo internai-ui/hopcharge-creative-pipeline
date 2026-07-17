@@ -57,7 +57,7 @@ export async function signSession(user: SessionUser): Promise<string> {
 }
 
 // Returns the user for a valid, unexpired, untampered token; null otherwise.
-// Never throws — a missing secret or bad token both fail closed to "not signed in".
+// Never throws - a missing secret or bad token both fail closed to "not signed in".
 export async function verifySession(token: string | undefined): Promise<SessionUser | null> {
   if (!token) return null
   try {
@@ -91,7 +91,7 @@ export function isAllowedIdentity(claims: {
   )
 }
 
-// ── URL / PKCE helpers (Web Crypto — works in Node + Edge runtimes) ───────────
+// ── URL / PKCE helpers (Web Crypto - works in Node + Edge runtimes) ───────────
 // Public origin of the current request, overridable with AUTH_URL. The redirect
 // URI built from this must EXACTLY match one registered on the Google client.
 export function baseUrl(req: Request): string {

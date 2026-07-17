@@ -315,7 +315,7 @@ export async function fetchAdTimingBreakdowns(
 
   const hourlyRes = await fetch(hourlyUrl.toString())
   const hourlyData = await hourlyRes.json() as { data?: Record<string, unknown>[]; error?: { message: string } }
-  // A Meta error (bad token, expired session, etc.) has no `data` field — without this
+  // A Meta error (bad token, expired session, etc.) has no `data` field - without this
   // check we'd silently return all-zero breakdowns and store them as if valid.
   if (hourlyData.error) throw new Error(`Meta timing (hourly) failed for ${adId}: ${hourlyData.error.message}`)
 

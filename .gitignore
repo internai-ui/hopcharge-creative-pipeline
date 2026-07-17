@@ -42,11 +42,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# terraform — state holds secrets (db password, access keys); tfvars may too
+# terraform - state holds secrets (db password, access keys); tfvars may too
 **/.terraform/*
 *.tfstate
 *.tfstate.*
 *.tfplan
 infra/terraform.tfvars
-# not committed on purpose — init fetches per-OS binaries (works on any Mac/Linux/Windows)
+# not committed on purpose - init fetches per-OS binaries (works on any Mac/Linux/Windows)
 .terraform.lock.hcl

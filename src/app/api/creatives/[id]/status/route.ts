@@ -44,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const generator = getVideoGenerator()
     const meta = (creative.metadata as { landscapeJobId?: string } | null) ?? {}
 
-    // Portrait (9:16) job — the primary. A failure fails the whole creative.
+    // Portrait (9:16) job - the primary. A failure fails the whole creative.
     const result = await generator.pollJobStatus(creative.generatorJobId)
     if (result.status === 'failed') {
       const updated = await prisma.creative.update({
@@ -62,7 +62,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       await storage.save(originalFilePath, buffer)
     }
 
-    // Landscape (16:9) job for YouTube "both" — best-effort. A failure just ships the
+    // Landscape (16:9) job for YouTube "both" - best-effort. A failure just ships the
     // Shorts version; still-rendering keeps the creative in "generating".
     let landscapeFilePath = creative.landscapeFilePath
     let landscapePending = false

@@ -369,7 +369,7 @@ export function IdeaCard({
               </div>
             ))
           ) : (
-            <span className="text-sm text-brand-muted italic">—</span>
+            <span className="text-sm text-brand-muted italic">-</span>
           )}
         </div>
 
@@ -382,12 +382,12 @@ export function IdeaCard({
               </div>
             ))
           ) : (
-            <span className="text-sm text-brand-muted italic">—</span>
+            <span className="text-sm text-brand-muted italic">-</span>
           )}
         </div>
 
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">YT CTA</span>
-        <div className="text-sm text-brand-dark">{idea.ytCallToAction?.replace(/_/g, ' ').toLowerCase() ?? '—'}</div>
+        <div className="text-sm text-brand-dark">{idea.ytCallToAction?.replace(/_/g, ' ').toLowerCase() ?? '-'}</div>
 
         {/* Angle - custom dropdown trigger */}
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Angle</span>

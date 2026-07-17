@@ -4,7 +4,7 @@ import { googleAdsAccessToken, googleAdsSearch } from '../google-ads/client'
 
 // ── YouTube analytics (Google Ads reporting) ─────────────────────────────────
 //
-// The Meta equivalent — MetaAnalytics — hits the Graph insights API; the YouTube
+// The Meta equivalent - MetaAnalytics - hits the Graph insights API; the YouTube
 // equivalent queries the Google Ads reporting API (GAQL) for the Demand Gen ads we
 // published. Same shape (AnalyticsPlugin), same output (a PerformanceSnapshot per
 // ad), same lead-based model: conversions = leads, cost / conversions = CPL (₹).
@@ -13,7 +13,7 @@ import { googleAdsAccessToken, googleAdsSearch } from '../google-ads/client'
 //   • fetchPerformanceBatch: one `WHERE ad_group_ad.ad.id IN (...)` GAQL call covers
 //     many ads at once, mirroring Meta's account-level /insights?level=ad batch.
 //   • metrics aggregate over the date range (segments.date is filtered but NOT
-//     selected), so each ad yields a single snapshot — exactly like Meta's time_range.
+//     selected), so each ad yields a single snapshot - exactly like Meta's time_range.
 //
 // Caveat: every ad this app publishes is PAUSED (a draft), and paused ads never
 // serve, so they report zeros until someone activates them in Google Ads. Google Ads
