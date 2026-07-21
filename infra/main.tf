@@ -190,4 +190,11 @@ resource "aws_db_instance" "this" {
   skip_final_snapshot        = var.db_skip_final_snapshot
   final_snapshot_identifier  = var.db_skip_final_snapshot ? null : "${var.project}-final"
   apply_immediately          = true
+
+  # engine_version pins only the major version (e.g. "16"); with auto_minor_version_
+  # upgrade on, AWS bumps the minor during maintenance windows. Ignore that drift so a
+  # later `terraform apply` doesn't try to reconcile the auto-upgraded minor version.
+  lifecycle {
+    ignore_changes = [engine_version]
+  }
 }

@@ -51,17 +51,22 @@ AWS_SECRET_ACCESS_KEY=...
 DATABASE_URL=postgresql://hopcharge:...@...rds.amazonaws.com:5432/hopcharge?sslmode=require
 ```
 
-Send that block back - those six values are everything the app needs. (They also go
-straight into **Vercel → Settings → Environment Variables**.)
+Paste that block into **Vercel → Settings → Environment Variables**. These six values
+are everything the app needs **from AWS** (S3 storage + the database). The Meta,
+Google Ads / YouTube, and Google sign-in variables are configured separately (see the
+repo's `.env.example`) - this stack does not touch them.
 
-## One more step after the env vars are set
+## One more step: create the database tables
 
-The database comes up empty. Create the tables once (from the repo root, with the
-`DATABASE_URL` above). This can be done by whoever has the URL:
+The database comes up empty. Create the schema once (run from the repo root). Terraform
+can fill in the real `DATABASE_URL` for you, so nothing secret is copy-pasted:
 
 ```bash
-DATABASE_URL="postgresql://hopcharge:...@...:5432/hopcharge?sslmode=require" npx prisma db push
+DATABASE_URL="$(terraform -chdir=infra output -raw database_url)" npx prisma db push
 ```
+
+(`terraform -chdir=infra output -raw prisma_db_push_command` prints this exact line.)
+Re-run the same command after any future schema change - it is safe to run repeatedly.
 
 ## Notes
 
