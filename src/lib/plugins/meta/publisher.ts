@@ -71,11 +71,13 @@ export class MetaPublisher implements PublisherPlugin {
     const filePath = creative.editedFilePath ?? creative.originalFilePath
     if (!filePath) throw new Error('Creative has no file path')
 
-    // Per-publish draft override wins over META_DRAFT_MODE. Draft → always PAUSED
-    // (saved, not delivered); otherwise PAUSED for a future-scheduled post, ACTIVE
-    // to go live now.
+    // Per-publish draft override wins over META_DRAFT_MODE. Draft → PAUSED (saved,
+    // not delivered). Production → ACTIVE, whether now or scheduled: a future
+    // scheduledAt is honored by Meta natively via the ad set's start_time (set in
+    // createAdSet), so the ad set must be ACTIVE for delivery to begin then. Pausing a
+    // scheduled production ad would make it never deliver.
     const isDraft = draft ?? this.draftMode
-    const status: 'PAUSED' | 'ACTIVE' = isDraft ? 'PAUSED' : (scheduledAt ? 'PAUSED' : 'ACTIVE')
+    const status: 'PAUSED' | 'ACTIVE' = isDraft ? 'PAUSED' : 'ACTIVE'
 
     const adSetId = await this.createAdSet(creative.id, funnelStage, status, scheduledAt, targetingOptions, adSchedule)
 
