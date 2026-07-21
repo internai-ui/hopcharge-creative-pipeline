@@ -133,15 +133,17 @@ function buildLiteAnalysis(
 // India-specific web search queries - live web results via Claude search tool
 const SEARCH_QUERIES = [
   // What's happening in the Indian EV market right now
-  'electric vehicle trends India 2025 latest news',
-  'EV adoption India consumer sentiment 2025',
+  'electric vehicle trends India 2026 latest news',
+  'EV adoption India consumer sentiment 2026',
   // What video/ad formats are working in India right now
-  'best performing Meta ad formats India 2025',
+  'best performing Meta ad formats India 2026',
   'trending video content formats India Instagram Reels YouTube Shorts',
   // Broader cultural moments that could connect to EV
   'trending topics India this week consumer lifestyle',
-  // Competitor intelligence
-  'EV charging companies India marketing campaigns 2025',
+  // Competitor ad intelligence - what other EV-charging brands are running/messaging
+  'EV charging companies India advertising campaigns 2026',
+  'doorstep mobile EV charging service India competitors',
+  'electric vehicle charging brands India Instagram ads messaging',
 ]
 
 export async function runTrendContext(mode: TrendMode = (process.env.TREND_MODE as TrendMode) || 'full'): Promise<void> {

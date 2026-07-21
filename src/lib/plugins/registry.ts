@@ -20,6 +20,7 @@ import { AdLibraryStub } from './stubs/ad-library.stub'
 
 import { ClaudeIdeaGenerator } from './claude/idea-generator'
 import { ClaudeWebSearch } from './claude/web-search'
+import { BraveWebSearch } from './brave/web-search'
 import { MetaPublisher } from './meta/publisher'
 import { YouTubePublisher } from './youtube/publisher'
 import { MetaAnalytics } from './meta/analytics'
@@ -109,6 +110,7 @@ export function getTrendData(): TrendDataPlugin {
 
 export function getWebSearch(): WebSearchPlugin {
   switch (env('WEB_SEARCH')) {
+    case 'brave': return new BraveWebSearch()
     case 'claude': return new ClaudeWebSearch()
     default: return new WebSearchStub()
   }
