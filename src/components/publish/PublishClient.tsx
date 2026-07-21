@@ -139,6 +139,30 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [error, setError] = useState('')
   const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube'>('all')
   const [reconciling, setReconciling] = useState(false)
+  const [scheduleRec, setScheduleRec] = useState<string | null>(null)
+  const [recommending, setRecommending] = useState(false)
+
+  // Pull a data-driven day-parting recommendation from historical CPL-by-time and fill
+  // the controls with it.
+  const recommendTimes = useCallback(async () => {
+    setRecommending(true)
+    setScheduleRec(null)
+    try {
+      const res = await fetch('/api/posts/recommend-schedule')
+      const data = await res.json()
+      setScheduleRec(data.rationale ?? 'No recommendation available.')
+      if (data.adSchedule) {
+        setUseAdSchedule(true)
+        setAdScheduleDays(data.adSchedule.days)
+        setAdScheduleStartHour(data.adSchedule.startHour)
+        setAdScheduleEndHour(data.adSchedule.endHour)
+      }
+    } catch {
+      setScheduleRec('Could not compute a recommendation.')
+    } finally {
+      setRecommending(false)
+    }
+  }, [])
 
   const visiblePosts = postFilter === 'all' ? posts : posts.filter((p) => p.platform === postFilter)
 
@@ -566,20 +590,43 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 Schedule <span className="font-normal text-brand-muted">(leave empty to post now)</span>
               </label>
               <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
+              {confirmCreative?.platform === 'youtube' && (
+                <p className="mt-1 text-xs text-amber-700">
+                  YouTube (Demand Gen) publishes immediately - the API has no per-ad start time or day-parting.
+                  Set delivery schedules on the campaign in Google Ads.
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="flex items-center gap-2 cursor-pointer mb-2">
-                <div
-                  onClick={() => setUseAdSchedule(v => !v)}
-                  className={`relative w-8 h-4.5 rounded-full transition-colors cursor-pointer ${useAdSchedule ? 'bg-brand' : 'bg-brand-border'}`}
-                  style={{ height: '1.125rem' }}
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div
+                    onClick={() => setUseAdSchedule(v => !v)}
+                    className={`relative w-8 h-4.5 rounded-full transition-colors cursor-pointer ${useAdSchedule ? 'bg-brand' : 'bg-brand-border'}`}
+                    style={{ height: '1.125rem' }}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${useAdSchedule ? 'translate-x-3.5' : ''}`} />
+                  </div>
+                  <span className="text-sm font-medium text-brand-dark">Ad schedule</span>
+                  <span className="text-sm font-normal text-brand-muted">(when the ad runs)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={recommendTimes}
+                  disabled={recommending}
+                  title="Suggest a day-parting window from your historical cost-per-lead by hour and weekday"
+                  className="text-xs font-medium text-brand hover:text-brand-dark disabled:opacity-50"
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${useAdSchedule ? 'translate-x-3.5' : ''}`} />
-                </div>
-                <span className="text-sm font-medium text-brand-dark">Ad schedule</span>
-                <span className="text-sm font-normal text-brand-muted">(when the ad runs)</span>
-              </label>
+                  {recommending ? 'Analyzing…' : 'Recommend times'}
+                </button>
+              </div>
+
+              {scheduleRec && (
+                <p className="text-xs text-brand-muted mb-2 bg-brand-surface/60 border border-brand-border rounded-lg px-3 py-2">
+                  {scheduleRec}
+                </p>
+              )}
 
               {useAdSchedule && (
                 <div className="bg-brand-bg border border-brand-border rounded-lg p-3 space-y-3">

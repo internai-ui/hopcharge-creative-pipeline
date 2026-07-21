@@ -79,6 +79,10 @@ export class YouTubePublisher implements PublisherPlugin {
     caption?: string
     headline?: string
     funnelStage?: 'TOF' | 'MOF' | 'BOF' | null
+    // Accepted for interface parity but intentionally unused: Google Ads Demand Gen has
+    // no per-ad start time or day-parting (ad scheduling is campaign-level via
+    // AdScheduleInfo), so a single ad can't be scheduled here. The ad publishes now
+    // (ENABLED or PAUSED); set delivery windows on the campaign in Google Ads.
     scheduledAt?: Date
     ytHeadlines?: string[]
     ytDescriptions?: string[]
