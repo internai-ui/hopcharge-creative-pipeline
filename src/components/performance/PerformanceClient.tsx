@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, Fragment } from 'react'
+import { useState, useMemo, useEffect, useCallback, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import {
   LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
@@ -10,6 +11,8 @@ import type { PerformanceSnapshot, Post, Creative, Idea } from '@prisma/client'
 type SnapshotWithRelations = PerformanceSnapshot & {
   post: Post & { creative: Creative & { idea: Idea } }
 }
+
+type CreativePerf = { idea: Idea; snapshots: SnapshotWithRelations[] }
 
 type HRow = { hour: number; leads: number; spend: number; cpl: number }
 type WRow = { day: number; leads: number; spend: number; cpl: number }
@@ -104,9 +107,24 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
   const [timingHourly, setTimingHourly] = useState(hourlyTimingData)
   const [timingWeekday, setTimingWeekday] = useState(weekdayTimingData)
   const [timingDataAvailable, setTimingDataAvailable] = useState(hasTimingData)
-  const [expandedPost, setExpandedPost] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('cpl')
   const [sortAsc, setSortAsc] = useState(true) // lower CPL first
+
+  // Per-creative history drilldown (click a row → chart of its snapshots over time).
+  const [historyCreative, setHistoryCreative] = useState<CreativePerf | null>(null)
+  const [historyClosing, setHistoryClosing] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  const closeHistory = useCallback(() => {
+    setHistoryClosing(true)
+    setTimeout(() => { setHistoryCreative(null); setHistoryClosing(false) }, 200)
+  }, [])
+  useEffect(() => {
+    if (!historyCreative) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeHistory() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [historyCreative, closeHistory])
 
   const filteredSnapshots = useMemo(() => {
     const cutoff = rangeCutoff(dateRange)
@@ -723,7 +741,7 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
                   <tr
                     key={c.idea.id}
                     className={`border-b border-brand-border hover:bg-brand-bg cursor-pointer transition-colors ${isFatigued ? 'bg-amber-50/50' : ''}`}
-                    onClick={() => setExpandedPost(expandedPost === c.idea.id ? null : c.idea.id)}
+                    onClick={() => setHistoryCreative(c)}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -747,28 +765,10 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
                         {totals.cpl > 0 ? inr(totals.cpl) : '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-brand-muted">
-                      {expandedPost === c.idea.id ? <ChevronUp /> : <ChevronDown />}
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-xs font-medium text-brand whitespace-nowrap">History &rarr;</span>
                     </td>
                   </tr>
-                  {expandedPost === c.idea.id && (
-                    <tr className="border-b border-brand-border bg-brand-bg/50">
-                      <td colSpan={10} className="px-4 py-2">
-                        <div className="text-xs text-brand-muted space-y-1 animate-reveal">
-                          {c.snapshots.map((s) => (
-                            <div key={s.id} className="flex gap-4">
-                              <span className="text-brand-muted">{new Date(s.snapshotDate).toLocaleDateString()}</span>
-                              <span>Impressions: {s.impressions.toLocaleString()}</span>
-                              <span>CPL: {s.cpl != null ? inr(Number(s.cpl)) : '-'}</span>
-                              <span>Leads: {s.leads}</span>
-                              <span>Freq: {Number(s.frequency).toFixed(1)}</span>
-                              <span>Spend: {inr(Number(s.spend))}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </>
               )
             })}
@@ -944,6 +944,137 @@ export function PerformanceClient({ initialSnapshots, initialHistoricalAds, hour
           </div>
         </div>
       )}
+
+      {mounted && historyCreative && (
+        <PostHistoryModal data={historyCreative} closing={historyClosing} onClose={closeHistory} />
+      )}
     </div>
+  )
+}
+
+// ── Per-creative history drilldown (opened from a live-posts row) ──────────────
+// Charts one creative's snapshots over time (leads bars + CPL line) with summary
+// tiles and a daily table. Data is already client-side (the page loads all
+// snapshots), so no fetch is needed. Modal matches the app's overlay conventions.
+function PostHistoryModal({
+  data, closing, onClose,
+}: {
+  data: CreativePerf
+  closing: boolean
+  onClose: () => void
+}) {
+  const { idea, snapshots } = data
+  const ordered = [...snapshots].sort(
+    (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+  )
+  const series = ordered.map((s) => ({
+    date: new Date(s.snapshotDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+    cpl: s.cpl != null ? Number(s.cpl) : null,
+    leads: s.leads,
+    spend: Number(s.spend),
+  }))
+  const platform = snapshots[0]?.post.platform === 'youtube' ? 'YouTube' : 'Meta'
+  const totalLeads = snapshots.reduce((n, s) => n + s.leads, 0)
+  const totalSpend = snapshots.reduce((n, s) => n + Number(s.spend), 0)
+  const totalImpr = snapshots.reduce((n, s) => n + s.impressions, 0)
+  const avgCpl = avgCplOf(snapshots)
+  const hasCpl = series.some((p) => p.cpl != null)
+
+  const tiles: [string, string][] = [
+    ['Days tracked', String(snapshots.length)],
+    ['Impressions', compact(totalImpr)],
+    ['Leads', totalLeads.toLocaleString('en-IN')],
+    ['Spend', inr(totalSpend)],
+    ['Avg CPL', avgCpl > 0 ? inr(avgCpl) : '-'],
+  ]
+
+  return createPortal(
+    <div
+      className={`fixed inset-0 z-50 flex items-start justify-center p-4 overflow-auto overlay-backdrop ${closing ? 'animate-fade-out-overlay' : 'animate-fade-overlay'}`}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className={`bg-white rounded-2xl w-full max-w-3xl mt-6 shadow-2xl ring-1 ring-brand-border overflow-hidden ${closing ? 'animate-modal-out' : 'animate-modal-in'}`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded text-white ${platform === 'YouTube' ? 'bg-red-600' : 'bg-[#1877f2]'}`}>{platform}</span>
+              <h2 className="font-semibold text-brand-dark truncate">{idea.title}</h2>
+            </div>
+            <p className="text-xs text-brand-muted mt-0.5">Performance history</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-lg text-brand-muted hover:text-brand-dark hover:bg-brand-surface transition-colors">
+            <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="13" y2="13" /><line x1="13" y1="1" x2="1" y2="13" /></svg>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {tiles.map(([label, val]) => (
+              <div key={label} className="rounded-lg bg-brand-bg border border-brand-border px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-muted">{label}</p>
+                <p className="text-sm font-semibold text-brand-dark mt-0.5">{val}</p>
+              </div>
+            ))}
+          </div>
+
+          {series.length === 0 ? (
+            <p className="text-sm text-brand-muted text-center py-8">No snapshots yet for this creative.</p>
+          ) : (
+            <div>
+              <h3 className="text-xs font-medium text-brand-muted uppercase tracking-wide mb-2">Leads &amp; CPL over time</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={series} margin={{ top: 8, right: 8, bottom: 8, left: -8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--chart-tick)', fontSize: 10 }} tickLine={false} minTickGap={16} />
+                  <YAxis yAxisId="left" tick={{ fill: 'var(--chart-tick)', fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--chart-tick)', fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ background: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-border)', borderRadius: 8, fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar yAxisId="left" dataKey="leads" name="Leads" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                  {hasCpl && <Line yAxisId="right" dataKey="cpl" name="CPL (₹)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {ordered.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-brand-border text-left text-xs text-brand-muted">
+                    <th className="py-2 pr-3 font-medium">Date</th>
+                    <th className="py-2 px-3 font-medium">Impressions</th>
+                    <th className="py-2 px-3 font-medium">Clicks</th>
+                    <th className="py-2 px-3 font-medium">Spend</th>
+                    <th className="py-2 px-3 font-medium">Freq</th>
+                    <th className="py-2 px-3 font-medium">Leads</th>
+                    <th className="py-2 pl-3 font-medium">CPL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordered.map((s) => {
+                    const cpl = s.cpl != null ? Number(s.cpl) : null
+                    return (
+                      <tr key={s.id} className="border-b border-brand-border/60">
+                        <td className="py-2 pr-3 text-brand-muted whitespace-nowrap">{new Date(s.snapshotDate).toLocaleDateString('en-IN')}</td>
+                        <td className="py-2 px-3 text-brand-dark">{s.impressions.toLocaleString('en-IN')}</td>
+                        <td className="py-2 px-3 text-brand-dark">{s.clicks.toLocaleString('en-IN')}</td>
+                        <td className="py-2 px-3 text-brand-dark">{inr(Number(s.spend))}</td>
+                        <td className="py-2 px-3 text-brand-dark">{Number(s.frequency).toFixed(1)}</td>
+                        <td className="py-2 px-3 text-brand-dark">{s.leads}</td>
+                        <td className={`py-2 pl-3 font-medium ${cpl == null ? 'text-brand-muted' : cpl <= CPL_GOOD ? 'text-emerald-600' : cpl <= CPL_OK ? 'text-brand-dark' : 'text-red-600'}`}>
+                          {cpl != null ? inr(cpl) : '-'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
