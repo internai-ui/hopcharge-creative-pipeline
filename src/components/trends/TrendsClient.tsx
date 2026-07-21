@@ -15,12 +15,15 @@ type IdeaScore = {
 type RisingTopic = { topic: string; rationale: string; googleTrendsScore: number }
 type FormatTrend = { format: string; trend: 'rising' | 'stable' | 'declining'; notes: string }
 
+type CompetitorAd = { title: string; description: string; format: string }
+
 interface TrendsClientProps {
   trendContexts: TrendContext[]
   ideaScores: IdeaScore[]
+  competitorAds: CompetitorAd[]
 }
 
-export function TrendsClient({ trendContexts: initialContexts, ideaScores: initialScores }: TrendsClientProps) {
+export function TrendsClient({ trendContexts: initialContexts, ideaScores: initialScores, competitorAds }: TrendsClientProps) {
   const [trendContexts, setTrendContexts] = useState<TrendContext[]>(initialContexts)
   const [ideaScores, setIdeaScores] = useState<IdeaScore[]>(initialScores)
   const [refreshing, setRefreshing] = useState<false | 'lite' | 'full'>(false)
@@ -280,6 +283,34 @@ export function TrendsClient({ trendContexts: initialContexts, ideaScores: initi
             <div>
               <h3 className="text-xs font-medium text-brand-muted uppercase tracking-wide mb-2">Competitor Ad Insights</h3>
               <p className="text-sm text-brand-muted">{latest.competitorAdInsights}</p>
+            </div>
+
+            {/* The actual competitor ads captured from the Meta Ad Library (behind the
+                synthesized insight above). Empty until a full refresh runs with a valid
+                Meta token - the Ad Library API is also limited for non-EU commercial ads. */}
+            <div>
+              <h3 className="text-xs font-medium text-brand-muted uppercase tracking-wide mb-2">
+                Competitor Ads <span className="text-brand-muted/60">(from Meta Ad Library · India)</span>
+              </h3>
+              {competitorAds.length === 0 ? (
+                <p className="text-sm text-brand-muted">
+                  None captured yet. Run a Full refresh with a valid Meta token to pull competitors&rsquo; live ads.
+                </p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {competitorAds.map((ad, i) => (
+                    <div key={i} className="rounded-lg border border-brand-border bg-brand-bg p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="text-sm font-medium text-brand-dark truncate">{ad.title || 'Untitled ad'}</p>
+                        <span className="shrink-0 text-[10px] uppercase tracking-wide text-brand-muted bg-white border border-brand-border rounded-full px-2 py-0.5">
+                          {ad.format?.replace(/_/g, ' ') || 'copy'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-brand-muted line-clamp-2">{ad.description || '(no ad copy)'}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

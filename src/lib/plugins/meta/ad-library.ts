@@ -8,7 +8,9 @@ export class MetaAdLibraryScraper implements AdLibraryPlugin {
 
   async fetchCompetitorAds({
     keywords,
-    country = 'US',
+    // Hopcharge operates in India; default the Ad Library search to IN. Override via
+    // AD_LIBRARY_COUNTRY if you ever need another market.
+    country = process.env.AD_LIBRARY_COUNTRY ?? 'IN',
     limit = 20,
   }: {
     keywords: string[]
