@@ -24,6 +24,9 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestions, setSuggestions] = useState<Record<string, string[]>>({})
+  const [suggestNote, setSuggestNote] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -66,6 +69,36 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
     } finally { setBusy(false) }
   }
 
+  // Ask Claude to brainstorm new keywords per lens (excludes what's already tracked).
+  const suggest = async () => {
+    setSuggesting(true); setSuggestNote('')
+    try {
+      const res = await fetch('/api/trends/keywords/recommend', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setSuggestNote(data.error ?? 'AI suggestions unavailable.'); return }
+      const sug = (data.suggestions ?? {}) as Record<string, string[]>
+      setSuggestions(sug)
+      const total = Object.values(sug).reduce((n, a) => n + a.length, 0)
+      if (total === 0) setSuggestNote('No new suggestions - your list already covers the obvious terms.')
+    } catch {
+      setSuggestNote('AI suggestions unavailable.')
+    } finally { setSuggesting(false) }
+  }
+
+  // Accept a suggested term (adds it, then drops it from the suggestion list).
+  const acceptSuggestion = async (lens: string, term: string) => {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/trends/keywords', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lens, term }),
+      })
+      if (res.ok) {
+        setSuggestions((s) => ({ ...s, [lens]: (s[lens] ?? []).filter((t) => t !== term) }))
+        await load()
+      }
+    } finally { setBusy(false) }
+  }
+
   const total = Object.values(groups).reduce((n, arr) => n + arr.length, 0)
 
   return (
@@ -87,6 +120,18 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
               Google Trends is a <span className="font-medium">supplementary nudge</span> (search interest, not ad
               performance) - your Meta CPL data drives real decisions. Keep these terms relevant to what you care about.
             </p>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={suggest}
+                disabled={suggesting}
+                title="Have Claude brainstorm new keyword ideas per lens (a starting point, not a live-volume signal)"
+                className="text-xs font-medium text-brand hover:text-brand-dark disabled:opacity-50 border border-brand-border rounded-lg px-2.5 py-1.5 transition-colors"
+              >
+                {suggesting ? 'Thinking…' : 'Suggest with AI'}
+              </button>
+              {suggestNote && <span className="text-xs text-brand-muted">{suggestNote}</span>}
+            </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-600">{error}</div>
@@ -111,6 +156,22 @@ export function KeywordManager({ onFormatTermsChange }: { onFormatTermsChange?: 
                     <span className="text-xs text-brand-muted italic">No keywords - this lens is skipped on refresh.</span>
                   )}
                 </div>
+
+                {(suggestions[l.key]?.length ?? 0) > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {suggestions[l.key].map((term) => (
+                      <button
+                        key={term}
+                        onClick={() => acceptSuggestion(l.key, term)}
+                        disabled={busy}
+                        title="AI suggestion - click to add"
+                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-brand text-brand text-xs px-2.5 py-1 hover:bg-brand/5 disabled:opacity-50 transition-colors"
+                      >
+                        + {term}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex gap-2 mt-2">
                   <input
