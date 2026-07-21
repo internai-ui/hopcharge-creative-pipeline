@@ -148,7 +148,8 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     setRecommending(true)
     setScheduleRec(null)
     try {
-      const res = await fetch('/api/posts/recommend-schedule')
+      const q = confirmCreative ? `?creativeId=${confirmCreative.id}` : ''
+      const res = await fetch(`/api/posts/recommend-schedule${q}`)
       const data = await res.json()
       setScheduleRec(data.rationale ?? 'No recommendation available.')
       if (data.adSchedule) {
@@ -162,7 +163,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     } finally {
       setRecommending(false)
     }
-  }, [])
+  }, [confirmCreative])
 
   const visiblePosts = postFilter === 'all' ? posts : posts.filter((p) => p.platform === postFilter)
 

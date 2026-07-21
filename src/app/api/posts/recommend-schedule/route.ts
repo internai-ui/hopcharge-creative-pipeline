@@ -1,11 +1,27 @@
+import { prisma } from '@/lib/db'
 import { recommendSchedule } from '@/lib/schedule-recommender'
+import { NextRequest } from 'next/server'
 
-// GET → a data-driven ad-schedule recommendation (best day-parting window) computed
-// from the account's historical CPL-by-hour / by-weekday. The Publish modal calls this
-// to pre-fill the day-parting controls.
-export async function GET() {
+// GET [?creativeId=...] → a day-parting recommendation. With a creativeId, the ad's
+// own copy is scanned for a time-of-day daypart and blended with the account's
+// historical CPL-by-time; without it, the recommendation is account-wide.
+export async function GET(req: NextRequest) {
   try {
-    const rec = await recommendSchedule()
+    const creativeId = new URL(req.url).searchParams.get('creativeId')
+    let adText: string | undefined
+    if (creativeId) {
+      const creative = await prisma.creative.findUnique({
+        where: { id: creativeId },
+        include: { idea: true },
+      })
+      const i = creative?.idea
+      if (i) {
+        adText = [i.hook, i.imageVisual, i.videoVisual, i.primaryText, i.headline, i.cta]
+          .filter(Boolean)
+          .join(' . ')
+      }
+    }
+    const rec = await recommendSchedule({ adText })
     return Response.json(rec)
   } catch (err) {
     return Response.json({ error: 'Failed to compute schedule recommendation', details: String(err) }, { status: 500 })
