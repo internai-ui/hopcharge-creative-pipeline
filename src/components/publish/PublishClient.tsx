@@ -364,7 +364,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-brand-dark">{post.creative.idea.title}</p>
                   <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap">
-                    <span className="text-xs text-brand-muted capitalize">{post.platform}</span>
+                    <span className="text-xs text-brand-muted">{post.platform === 'youtube' ? 'YouTube' : 'Meta'}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${POST_STATUS_COLORS[post.status] ?? 'bg-brand-surface text-brand-muted'}`}>
                       {post.status}
                     </span>

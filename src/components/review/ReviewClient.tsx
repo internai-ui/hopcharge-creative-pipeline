@@ -330,7 +330,7 @@ export function ReviewClient({ initialCreatives }: ReviewClientProps) {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Fact label="Generator">{selected.generatorName}</Fact>
                     <Fact label="Media"><span className="capitalize">{selected.mediaType}</span></Fact>
-                    <Fact label="Platform"><span className="capitalize">{selected.platform}</span> · {selected.landscapeFilePath ? '9:16 + 16:9' : selected.aspectRatio}</Fact>
+                    <Fact label="Platform"><span>{selected.platform === 'youtube' ? 'YouTube' : 'Meta'}</span> · {selected.landscapeFilePath ? '9:16 + 16:9' : selected.aspectRatio}</Fact>
                     <Fact label="Angle"><span className="capitalize">{selected.idea.angle.replace(/_/g, ' ')}</span></Fact>
                     <Fact label="Human edited">{selected.isHumanEdited ? 'Yes' : 'No'}</Fact>
                     <Fact label="Trend"><TrendDot score={selected.idea.trendScore} warning={selected.idea.trendWarning} /></Fact>

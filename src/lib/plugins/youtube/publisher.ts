@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 //
 //   1. OAuth2: exchange the refresh token for an access token (scope: adwords).
 //   2. Upload each creative video to YouTube (UNLISTED) → YouTube video id.
-//   3. Wrap each as a YoutubeVideoAsset (assets:mutate).
+//   3. Wrap each as a YouTube video asset (assets:mutate, youtubeVideoAsset).
 //   4. Create a PAUSED DemandGenVideoResponsiveAd (adGroupAds:mutate) with the
 //      video(s) + a required logo asset + business name + several headlines /
 //      descriptions + a CTA - the "draft".
