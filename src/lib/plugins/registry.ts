@@ -109,7 +109,10 @@ export function getTrendData(): TrendDataPlugin {
 }
 
 export function getWebSearch(): WebSearchPlugin {
-  switch (env('WEB_SEARCH')) {
+  // Default to free Brave search whenever a key is present; Claude's paid web_search
+  // tool is opt-in only (WEB_SEARCH=claude). Unset + no key falls back to the stub.
+  const choice = process.env.WEB_SEARCH ?? (process.env.BRAVE_API_KEY ? 'brave' : 'stub')
+  switch (choice) {
     case 'brave': return new BraveWebSearch()
     case 'claude': return new ClaudeWebSearch()
     default: return new WebSearchStub()

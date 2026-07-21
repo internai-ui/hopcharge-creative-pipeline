@@ -26,45 +26,12 @@ const FUNNEL_ANGLE_GUIDANCE: Record<string, string> = {
   bof: 'Use BOF angles: pain_point (with urgency), convenience, problem_solution. Include specific pricing (₹3.5/km, subscription tiers), first-time offers, FOMO language, and RescueCharge as the final anxiety reliever. CTAs must be direct and action-driving: "Book now", "Download the app", "Start your subscription", "Get your first charge today".',
 }
 
-export class ClaudeIdeaGenerator implements IdeaGeneratorPlugin {
-  name = 'claude'
-
-  async generateIdeas({
-    count,
-    nudge,
-    existingIdeas = [],
-    performanceContext,
-    trendContext,
-    funnelMode = 'mix',
-  }: {
-    count: number
-    nudge?: string
-    existingIdeas?: Idea[]
-    performanceContext: PerformanceContext
-    trendContext?: TrendContext
-    funnelMode?: FunnelMode
-  }): Promise<IdeaSuggestion[]> {
-    const tc = trendContext as (TrendContext & {
-      risingTopics: Array<{ topic: string; rationale: string; googleTrendsScore: number }>
-      decliningTopics: Array<{ topic: string; rationale: string; googleTrendsScore: number }>
-      platformFormatTrends: Array<{ format: string; trend: string; notes: string }>
-      topicScores: Record<string, number>
-      rawSources?: { culturalMoments?: Array<{ moment: string; relevance: string; urgency: string }> }
-    }) | undefined
-    const culturalMoments = tc?.rawSources?.culturalMoments ?? []
-
-    const baselineSection = performanceContext.historicalBaseline.length > 0
-      ? `## Proven Hopcharge Ads (CPL < Rs${process.env.CPL_SUCCESS_THRESHOLD ?? 100})
-${performanceContext.historicalBaseline.slice(0, 3).map(ad => {
-  const c = ad.concepts
-  return `- "${ad.adName}" (Rs${ad.cpl.toFixed(0)}/lead): "${ad.bodyText.slice(0, 80)}..."${c ? ` | angle: ${c.angle} | tone: ${c.tone}` : ''}`
-}).join('\n')}`
-      : ''
-
-    const funnelObjective = FUNNEL_OBJECTIVES[funnelMode](count)
-    const funnelAngleGuidance = FUNNEL_ANGLE_GUIDANCE[funnelMode]
-
-    const prompt = `You are a creative strategist for Hopcharge, India's first on-demand doorstep EV charging service. Hopcharge sends a branded mobile charging van directly to the customer - no home wall-box needed. The core customer is an urban EV owner in Delhi-NCR (Gurugram, Noida, Delhi) who lives in an apartment or rented property where installing a personal charger is not permitted or practical. They typically own a Tata EV (Nexon EV, Tiago EV, Punch EV, Curvv EV) and are a working professional, 25–45 years old. Key product facts: book via app up to 48 hours ahead; fast-charge at home/office/anywhere; RescueCharge emergency service for dead batteries; Tata.ev official partner; subscription plans from 6–24 months (~₹3.5/km equivalent). Ads run on Instagram Reels, YouTube Shorts, and Facebook - short-form video (15–30s) and static image formats.
+// Static instructions shared by every idea-generation call - the brand/van/Sara
+// description, the visual-diversity mandate, and all output-format field rules. Kept
+// as one frozen block so it can be sent as a cached system prompt (cache_control):
+// repeated generations reuse it at ~0.1x input cost instead of re-billing it each time.
+// Nothing here interpolates per-call data - that all lives in the user message.
+const IDEA_SYSTEM_PROMPT = `You are a creative strategist for Hopcharge, India's first on-demand doorstep EV charging service. Hopcharge sends a branded mobile charging van directly to the customer - no home wall-box needed. The core customer is an urban EV owner in Delhi-NCR (Gurugram, Noida, Delhi) who lives in an apartment or rented property where installing a personal charger is not permitted or practical. They typically own a Tata EV (Nexon EV, Tiago EV, Punch EV, Curvv EV) and are a working professional, 25–45 years old. Key product facts: book via app up to 48 hours ahead; fast-charge at home/office/anywhere; RescueCharge emergency service for dead batteries; Tata.ev official partner; subscription plans from 6–24 months (~₹3.5/km equivalent). Ads run on Instagram Reels, YouTube Shorts, and Facebook - short-form video (15–30s) and static image formats.
 
 ## Hopcharge Van - Physical Description for Accurate Visuals
 Primary van (use this unless the idea calls for the larger unit): compact Maruti Suzuki Eeco-style white Indian micro cargo van - white painted front cabin and lower panels, royal blue vinyl wrap covering the upper rear cargo section, bright gold/amber horizontal accent stripe running the full body length, plain unlabelled blue panel with no logo, icon, or lettering (the real Hopcharge logo is composited onto the image afterwards - never describe a wordmark, icon, or text on the van), sliding side door that opens to reveal internal charging equipment, thick black rubber charging hose (~5 cm diameter, 3–4 m long) running from the van's open side port to the EV's charge socket.
@@ -73,55 +40,14 @@ Settings (these are EXAMPLES, not a default to repeat every time - vary widely, 
 Recurring customer character - Sara: use her ONLY when an ad actually features the EV owner / customer. NOT every ad needs a person. Her description: Indian woman, mid-to-late 20s, warm wheatish complexion with golden undertone, round soft face with full cheeks, large expressive almond-shaped dark brown eyes, naturally arched dark eyebrows, full lips with a warm genuine smile, long extremely thick voluminous near-black hair with natural loose waves falling to mid-back (her most distinctive feature - always specify this hair when she appears), athletic-curvy build ~165 cm, confident upright posture, minimal warm makeup, small hoop earrings. She is calm and unhurried - not looking at camera. Outfit varies with scene context (casual Western / Indian ethnic / athletic / formal - see scene).
 Consistency rule: WHENEVER an ad shows the EV owner / customer, it MUST be Sara - she is the single recognisable brand face, so customers never vary. But many strong ads have NO customer at all: product/van hero shots, the EV charging alone, a macro detail of the connector or charge port, an aerial or cityscape, an infographic-style frame, a lifestyle scene implied without a person. Use those freely to break the monotony. Any OTHER humans (van technician/operator, family members, passers-by, other EV owners in a social-proof montage) are NOT Sara and SHOULD genuinely vary in age, gender, and appearance.
 
-${funnelObjective}
-
-${baselineSection}
-
-${tc ? `## Current Trend Context (India, live data)
-${tc.summary ?? ''}
-
-### Rising topics - lean into these
-${(tc.risingTopics ?? []).map(t => `- ${t.topic} (score: ${t.googleTrendsScore}): ${t.rationale}`).join('\n') || 'None above threshold'}
-
-### Declining topics - avoid these angles
-${(tc.decliningTopics ?? []).map(t => `- ${t.topic}: ${t.rationale}`).join('\n') || 'None below threshold'}
-
-### Video/ad format trends
-${(tc.platformFormatTrends ?? []).map(f => `- ${f.format} [${f.trend}]: ${f.notes}`).join('\n') || 'No format data'}
-
-${culturalMoments.length > 0 ? `### Cultural moments to piggyback on
-${culturalMoments.map(m => `- ${m.moment} [${m.urgency}]: ${m.relevance}`).join('\n')}` : ''}
-
-### Competitor landscape
-${tc.competitorAdInsights ?? ''}` : '## Trend Context\nNot available - focus on the proven ad baseline above and general EV marketing principles.'}
-
-## Pipeline Performance
-Winning angles: ${performanceContext.winningPatterns.join(', ')}
-Avoid: ${performanceContext.patternsToAvoid.join(', ')}
-${performanceContext.topPerformers.length > 0 ? `Top ads (lower CPL is better): ${performanceContext.topPerformers.map(p => `"${p.idea.title}" (CPL ₹${p.cpl.toFixed(0)})`).join(', ')}` : ''}
-
-${existingIdeas.length > 0 ? `## Existing ideas to avoid duplicating\n${existingIdeas.map(i => `- ${i.title}`).join('\n')}` : ''}
-
-${nudge ? `## User direction\n${nudge}` : ''}
-
-## Instructions
-Generate exactly ${count} distinct ad ideas. For each idea:
-1. ${funnelAngleGuidance}
-2. Build on RISING topics and WINNING patterns - avoid declining trends
-3. Extract trendTags (2-4 tags from the current trend context that this idea rides)
-4. Write BOTH the Meta ad copy (primaryText + headline) AND the YouTube copy (ytHeadlines + ytDescriptions + ytCallToAction) - see field rules below
-5. Set funnelStage to TOF, MOF, or BOF based on the ad's intent (${funnelMode === 'mix' ? 'vary it across the set' : `all ${funnelMode.toUpperCase()} for this batch`})
-6. Explain your reasoning in the rationale field, referencing the funnel stage, performance data, and trends
-7. Make this idea's VISUAL genuinely distinct from the others in this batch - see the visual diversity mandate below
-
 ## Visual diversity mandate (critical - read before writing imageVisual / videoFirstFrame / videoVisual)
-Past batches all looked like the same photograph: the same woman beside the same van on the same paver-block Gurugram driveway in the same golden-hour light at 50 mm. Do NOT repeat that. Across these ${count} ideas, deliberately spread the visuals so no two creatives read as the same shot. Vary the following idea-to-idea (treat them as dials to turn, not boxes to leave at default):
+Past batches all looked like the same photograph: the same woman beside the same van on the same paver-block Gurugram driveway in the same golden-hour light at 50 mm. Do NOT repeat that. Across the ideas in a batch, deliberately spread the visuals so no two creatives read as the same shot. Vary the following idea-to-idea (treat them as dials to turn, not boxes to leave at default):
 - SUBJECT: Sara (the customer) in some, but also van-only hero shots, the EV charging alone, macro connector/charge-port detail, the technician at work, a skyline/cityscape, an overhead flat-lay, or an infographic-style frame.
 - LOCATION: rotate across Delhi-NCR - gated colony, rooftop/stilt/basement parking, office-tower forecourt, a Noida market street, DLF CyberHub, an expressway, a leafy lane, a mall drop-off, monsoon-wet tarmac. Avoid reusing the same location twice in one batch.
 - TIME OF DAY & LIGHTING: golden hour is only ONE option - also bright midday, blue-hour dusk, night with practical/street lights, overcast soft light, harsh directional sun, warm indoor/garage light, neon night.
 - SHOT TYPE & LENS: mix wide-establishing, medium, close-up, extreme macro, overhead/drone, low-angle hero - with focal lengths to match, not always 50 mm shallow depth of field.
 - COMPOSITION & MOOD: vary framing (rule-of-thirds, centred, diagonal, flat-lay, ECU) and emotional register (urgent, serene, aspirational, playful, premium, reassuring).
-This visual variety must NOT override strategy: each idea's angle, funnel stage, copy, and trendTags must still be driven by the RISING topics, WINNING patterns, and proven baseline above. Vary the LOOK; keep the SUBSTANCE grounded in the trend and performance data.
+This visual variety must NOT override strategy: each idea's angle, funnel stage, copy, and trendTags must still be driven by the RISING topics, WINNING patterns, and proven baseline given in the user message. Vary the LOOK; keep the SUBSTANCE grounded in the trend and performance data.
 
 ## Output format - primaryText and headline field rules
 Every ad runs with a "Send WhatsApp Message" call-to-action button, so the copy must make the reader want to start a WhatsApp chat with Hopcharge - not click to a website.
@@ -164,10 +90,92 @@ Respond with a JSON array only, no other text:
   }
 ]`
 
+export class ClaudeIdeaGenerator implements IdeaGeneratorPlugin {
+  name = 'claude'
+
+  async generateIdeas({
+    count,
+    nudge,
+    existingIdeas = [],
+    performanceContext,
+    trendContext,
+    funnelMode = 'mix',
+  }: {
+    count: number
+    nudge?: string
+    existingIdeas?: Idea[]
+    performanceContext: PerformanceContext
+    trendContext?: TrendContext
+    funnelMode?: FunnelMode
+  }): Promise<IdeaSuggestion[]> {
+    const tc = trendContext as (TrendContext & {
+      risingTopics: Array<{ topic: string; rationale: string; googleTrendsScore: number }>
+      decliningTopics: Array<{ topic: string; rationale: string; googleTrendsScore: number }>
+      platformFormatTrends: Array<{ format: string; trend: string; notes: string }>
+      topicScores: Record<string, number>
+      rawSources?: { culturalMoments?: Array<{ moment: string; relevance: string; urgency: string }> }
+    }) | undefined
+    const culturalMoments = tc?.rawSources?.culturalMoments ?? []
+
+    const baselineSection = performanceContext.historicalBaseline.length > 0
+      ? `## Proven Hopcharge Ads (CPL < Rs${process.env.CPL_SUCCESS_THRESHOLD ?? 100})
+${performanceContext.historicalBaseline.slice(0, 3).map(ad => {
+  const c = ad.concepts
+  return `- "${ad.adName}" (Rs${ad.cpl.toFixed(0)}/lead): "${ad.bodyText.slice(0, 80)}..."${c ? ` | angle: ${c.angle} | tone: ${c.tone}` : ''}`
+}).join('\n')}`
+      : ''
+
+    const funnelObjective = FUNNEL_OBJECTIVES[funnelMode](count)
+    const funnelAngleGuidance = FUNNEL_ANGLE_GUIDANCE[funnelMode]
+
+    const userPrompt = `${funnelObjective}
+
+${baselineSection}
+
+${tc ? `## Current Trend Context (India, live data)
+${tc.summary ?? ''}
+
+### Rising topics - lean into these
+${(tc.risingTopics ?? []).map(t => `- ${t.topic} (score: ${t.googleTrendsScore}): ${t.rationale}`).join('\n') || 'None above threshold'}
+
+### Declining topics - avoid these angles
+${(tc.decliningTopics ?? []).map(t => `- ${t.topic}: ${t.rationale}`).join('\n') || 'None below threshold'}
+
+### Video/ad format trends
+${(tc.platformFormatTrends ?? []).map(f => `- ${f.format} [${f.trend}]: ${f.notes}`).join('\n') || 'No format data'}
+
+${culturalMoments.length > 0 ? `### Cultural moments to piggyback on
+${culturalMoments.map(m => `- ${m.moment} [${m.urgency}]: ${m.relevance}`).join('\n')}` : ''}
+
+### Competitor landscape
+${tc.competitorAdInsights ?? ''}` : '## Trend Context\nNot available - focus on the proven ad baseline above and general EV marketing principles.'}
+
+## Pipeline Performance
+Winning angles: ${performanceContext.winningPatterns.join(', ')}
+Avoid: ${performanceContext.patternsToAvoid.join(', ')}
+${performanceContext.topPerformers.length > 0 ? `Top ads (lower CPL is better): ${performanceContext.topPerformers.map(p => `"${p.idea.title}" (CPL ₹${p.cpl.toFixed(0)})`).join(', ')}` : ''}
+
+${existingIdeas.length > 0 ? `## Existing ideas to avoid duplicating\n${existingIdeas.map(i => `- ${i.title}`).join('\n')}` : ''}
+
+${nudge ? `## User direction\n${nudge}` : ''}
+
+## Instructions
+Generate exactly ${count} distinct ad ideas. For each idea:
+1. ${funnelAngleGuidance}
+2. Build on RISING topics and WINNING patterns - avoid declining trends
+3. Extract trendTags (2-4 tags from the current trend context that this idea rides)
+4. Write BOTH the Meta ad copy (primaryText + headline) AND the YouTube copy (ytHeadlines + ytDescriptions + ytCallToAction) - see the field rules in the system prompt
+5. Set funnelStage to TOF, MOF, or BOF based on the ad's intent (${funnelMode === 'mix' ? 'vary it across the set' : `all ${funnelMode.toUpperCase()} for this batch`})
+6. Explain your reasoning in the rationale field, referencing the funnel stage, performance data, and trends
+7. Make this idea's VISUAL genuinely distinct from the others in this batch - follow the visual diversity mandate in the system prompt
+
+Respond with ONLY the JSON array described in the system prompt (its field rules and schema), no other text.`
+
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      system: [{ type: 'text', text: IDEA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
