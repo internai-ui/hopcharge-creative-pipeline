@@ -1,6 +1,9 @@
 import type { PublisherPlugin } from '../interfaces'
 import type { Creative } from '@prisma/client'
 import { storage } from '@/lib/storage'
+import { googleAdsSearch } from '../google-ads/client'
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // ── YouTube publisher (Google Ads Demand Gen) ────────────────────────────────
 //
@@ -195,10 +198,52 @@ export class YouTubePublisher implements PublisherPlugin {
       body: new Uint8Array(buffer),
     })
     const data = await put.json().catch(() => ({}))
-    const videoId: string | undefined =
-      data?.youTubeVideoUpload?.videoId ?? data?.videoId ?? data?.resourceName?.split('/').pop()
-    if (!videoId) throw new Error(`YouTube upload finalize returned no video id: ${JSON.stringify(data).slice(0, 300)}`)
-    return videoId
+
+    // The video_id is only populated once YouTube finishes PROCESSING the upload, so
+    // the finalize response usually carries just the YouTubeVideoUpload resource name.
+    // Use an id if it's already there; otherwise poll the resource until PROCESSED.
+    const immediateId: string | undefined = data?.youTubeVideoUpload?.videoId ?? data?.videoId
+    if (immediateId) return immediateId
+    const resourceName: string | undefined = data?.youTubeVideoUpload?.resourceName ?? data?.resourceName
+    if (!resourceName) {
+      throw new Error(`YouTube upload finalize returned no resource: ${JSON.stringify(data).slice(0, 300)}`)
+    }
+    return this.pollUploadForVideoId(token, resourceName, label)
+  }
+
+  // Poll the YouTubeVideoUpload resource until it reaches PROCESSED (when video_id is
+  // populated). States per the Google Ads docs: PENDING -> UPLOADED -> PROCESSED;
+  // FAILED / REJECTED / UNAVAILABLE are terminal errors.
+  //
+  // NOTE: YouTube processing can take minutes. On Vercel Hobby the publish function is
+  // time-capped, so the defaults keep the poll short (tune with YOUTUBE_UPLOAD_POLL_*).
+  private async pollUploadForVideoId(token: string, resourceName: string, label: string): Promise<string> {
+    const query =
+      'SELECT you_tube_video_upload.resource_name, you_tube_video_upload.video_id, you_tube_video_upload.state ' +
+      `FROM you_tube_video_upload WHERE you_tube_video_upload.resource_name = '${resourceName}'`
+    const maxAttempts = Math.max(1, Number(process.env.YOUTUBE_UPLOAD_POLL_ATTEMPTS ?? 10))
+    const intervalMs = Math.max(1000, Number(process.env.YOUTUBE_UPLOAD_POLL_INTERVAL_MS ?? 3000))
+
+    let lastError: unknown = null
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const rows = await googleAdsSearch<{ youTubeVideoUpload?: { state?: string; videoId?: string } }>(query, token)
+        const upload = rows[0]?.youTubeVideoUpload
+        if (upload?.state === 'PROCESSED' && upload.videoId) return upload.videoId
+        if (upload?.state === 'FAILED' || upload?.state === 'REJECTED' || upload?.state === 'UNAVAILABLE') {
+          throw new Error(`YouTube upload ${label} ended in state ${upload.state}`)
+        }
+      } catch (err) {
+        // Terminal-state errors abort; transient query errors just retry next tick.
+        if (err instanceof Error && /ended in state/.test(err.message)) throw err
+        lastError = err
+      }
+      await sleep(intervalMs)
+    }
+    throw new Error(
+      `YouTube upload ${label} did not reach PROCESSED after ${maxAttempts} attempts` +
+        (lastError ? ` (last error: ${String(lastError)})` : ''),
+    )
   }
 
   // ── Video asset ─────────────────────────────────────────────────────────────
