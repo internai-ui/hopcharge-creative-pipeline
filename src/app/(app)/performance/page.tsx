@@ -10,11 +10,13 @@ export default async function PerformancePage() {
       orderBy: { snapshotDate: 'asc' },
     }),
     prisma.historicalAd.findMany({
-      orderBy: { cpl: 'asc' },
+      orderBy: [{ cpl: 'asc' }, { views: 'desc' }],
       select: {
-        id: true, metaAdId: true, adName: true, campaignName: true,
+        id: true, metaAdId: true, platform: true, adName: true, campaignName: true,
         cpl: true, leads: true, spend: true, impressions: true, reach: true,
         clicks: true, cpm: true, ctr: true, isSuccessful: true,
+        views: true, likesCount: true, commentsCount: true, externalWatchUrl: true,
+        creativeImagePath: true, creativeType: true,
         dateFrom: true, dateTo: true,
         hourlyBreakdown: true, weekdayBreakdown: true,
       },
