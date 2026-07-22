@@ -16,6 +16,8 @@ type ImportedAd = {
   cpl: number
   leads: number
   isSuccessful: boolean
+  creativeImagePath: string | null
+  creativeType: string | null
 }
 
 interface PublishClientProps {
@@ -136,6 +138,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [modalPosting, setModalPosting] = useState(false)
   const [postingCreativeIds, setPostingCreativeIds] = useState<Set<string>>(new Set())
   const [publishingPostId, setPublishingPostId] = useState<string | null>(null)
+  const [pausingPostId, setPausingPostId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube'>('all')
   const [reconciling, setReconciling] = useState(false)
@@ -276,6 +279,18 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     setPosts(prev => prev.filter(p => p.id !== postId))
   }, [])
 
+  // Pause / unpublish a live post on its platform (Meta -> PAUSED, YouTube -> private).
+  const handlePausePost = useCallback(async (postId: string) => {
+    setPausingPostId(postId)
+    try {
+      await fetch(`/api/posts/${postId}/pause`, { method: 'POST' })
+      const allPosts = await fetch('/api/posts').then((r) => r.json())
+      setPosts(allPosts)
+    } finally {
+      setPausingPostId(null)
+    }
+  }, [])
+
   // Reconcile against Meta Ads Manager: ads deleted there get marked "deleted" here.
   const handleReconcile = useCallback(async () => {
     setReconciling(true)
@@ -403,6 +418,16 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                         Draft
                       </span>
                     )}
+                    {(post.platformMetadata as { paused?: boolean } | null)?.paused && post.status === 'posted' && (
+                      <span
+                        className="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                        title={post.platform === 'youtube'
+                          ? 'Video was set to private (unpublished) from here'
+                          : 'Ad was paused on Meta from here - not delivering'}
+                      >
+                        Paused
+                      </span>
+                    )}
                     {post.scheduledAt && (
                       <span className="text-xs text-brand-muted">
                         Scheduled: {new Date(post.scheduledAt).toLocaleString()}
@@ -421,6 +446,16 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {post.status === 'posted' && !(post.platformMetadata as { paused?: boolean } | null)?.paused && (
+                    <button
+                      onClick={() => handlePausePost(post.id)}
+                      disabled={pausingPostId === post.id}
+                      className="text-sm border border-brand-border hover:border-amber-400 text-brand-muted hover:text-amber-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      title={post.platform === 'youtube' ? 'Make the video private (take it down)' : 'Pause the ad on Meta (stop delivery)'}
+                    >
+                      {pausingPostId === post.id ? 'Pausing...' : post.platform === 'youtube' ? 'Unpublish' : 'Pause'}
+                    </button>
+                  )}
                   {post.status === 'queued' && (
                     <button
                       onClick={() => handlePublishNow(post.id)}
@@ -474,6 +509,18 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
           <div className="space-y-2">
             {initialImportedAds.slice(0, 50).map((ad) => (
               <div key={ad.id} className="bg-white border border-brand-border rounded-xl px-4 py-3 flex items-center gap-4">
+                {ad.creativeImagePath ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/meta/historical/${ad.id}/image`}
+                    alt=""
+                    className="w-12 h-12 rounded-lg object-cover shrink-0 bg-brand-bg"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-brand-bg flex items-center justify-center shrink-0" title="No creative image imported yet">
+                    {ad.creativeType === 'image' ? <ImageIcon /> : <VideoIcon />}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-brand-dark truncate" title={ad.adName}>{ad.adName}</p>
                   <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs text-brand-muted">

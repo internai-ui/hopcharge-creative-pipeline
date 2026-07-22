@@ -12,10 +12,11 @@ export default async function PublishPage() {
       include: { creative: { include: { idea: true } } },
       orderBy: { createdAt: 'desc' },
     }),
-    // Real ads imported from the Meta account (read-only).
+    // Real ads imported from the Meta account (read-only). creativeImagePath is the
+    // downloaded still (POST /api/meta/import-creatives); shown as a row thumbnail.
     prisma.historicalAd.findMany({
       orderBy: { cpl: 'asc' },
-      select: { id: true, metaAdId: true, adName: true, campaignName: true, cpl: true, leads: true, isSuccessful: true },
+      select: { id: true, metaAdId: true, adName: true, campaignName: true, cpl: true, leads: true, isSuccessful: true, creativeImagePath: true, creativeType: true },
     }),
   ])
 

@@ -105,6 +105,8 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
     errors: number
   } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [imgImporting, setImgImporting] = useState(false)
+  const [imgResult, setImgResult] = useState<{ scanned: number; matched: number; downloaded: number; skipped: number; errors: number } | null>(null)
   const [baseline, setBaseline] = useState<{
     total: number
     successful: number
@@ -345,6 +347,24 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
     }
   }, [])
 
+  // Download the actual creative still/thumbnail for each imported historical Meta ad
+  // (run "Import Meta history" first). They surface as thumbnails on the Publish page.
+  const handleImportCreativeImages = useCallback(async () => {
+    setImgImporting(true)
+    setImgResult(null)
+    setImportError(null)
+    try {
+      const res = await fetch('/api/meta/import-creatives', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setImgResult(data)
+      else setImportError(data.error ?? 'Creative image import failed')
+    } catch (e) {
+      setImportError(`Network error: ${String(e)}`)
+    } finally {
+      setImgImporting(false)
+    }
+  }, [])
+
   const handleRefreshTrend = useCallback(async () => {
     await fetch('/api/trends/refresh', { method: 'POST' })
     const res = await fetch('/api/trends/latest')
@@ -392,6 +412,14 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
               className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {importing ? 'Importing...' : 'Import Meta history'}
+            </button>
+            <button
+              onClick={handleImportCreativeImages}
+              disabled={imgImporting}
+              title="Download the actual creative still/thumbnail for each imported Meta ad (run Import Meta history first). They appear as thumbnails in the Publish page's Imported-from-Meta list."
+              className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
+            >
+              {imgImporting ? 'Importing images...' : 'Import creative images'}
             </button>
             <button
               onClick={() => setAddDrawerOpen(true)}
@@ -481,6 +509,18 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
 
       {importError && (
         <ErrorBanner title="Import failed" message={importError} onDismiss={() => setImportError(null)} />
+      )}
+
+      {imgResult && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-start justify-between gap-4">
+          <p className="text-sm text-emerald-800">
+            Creative images: <span className="font-semibold">{imgResult.downloaded} downloaded</span>
+            {imgResult.skipped ? `, ${imgResult.skipped} already had one` : ''}
+            {imgResult.errors ? `, ${imgResult.errors} errors` : ''} (of {imgResult.matched} matched, {imgResult.scanned} scanned).{' '}
+            They now show in the Publish page&rsquo;s Imported-from-Meta list.
+          </p>
+          <button onClick={() => setImgResult(null)} className="text-emerald-500 hover:text-emerald-700 text-xs shrink-0">Dismiss</button>
+        </div>
       )}
 
       {importResult && (
