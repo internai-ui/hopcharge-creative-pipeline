@@ -17,6 +17,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!post) return Response.json({ error: 'Post not found' }, { status: 404 })
     if (post.status === 'posted') return Response.json({ error: 'Post already published' }, { status: 400 })
 
+    // YouTube accepts video only. Catch an image creative here so the user gets a clear
+    // message (not a 500) - these are dead-ends: delete the post and generate a video
+    // for YouTube, or publish the image to Meta instead.
+    if (post.platform === 'youtube' && post.creative.mediaType !== 'video') {
+      return Response.json(
+        { error: 'This is an image creative and YouTube accepts video only. Delete this post and generate a video for YouTube (or publish the image to Meta).' },
+        { status: 400 },
+      )
+    }
+
     const publisher = getPublisher(post.platform)
     const adSchedule = post.adSchedule as { days: number[]; startHour: number; endHour: number } | null
     const idea = post.creative.idea

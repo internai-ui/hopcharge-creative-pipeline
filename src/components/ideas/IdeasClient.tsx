@@ -388,11 +388,22 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
         >
           <div className={`w-full max-w-sm rounded-2xl border border-brand-border bg-white p-6 text-center shadow-2xl ${pickerClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <h2 className="mb-1 text-base font-semibold text-brand">Generate for which platform?</h2>
-            <p className="mb-5 text-xs text-brand-muted">Meta renders 9:16. YouTube renders a 9:16 Short + a 16:9 in-stream video.</p>
-            <div className="flex gap-3">
-              <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
-              <button onClick={() => runPending('youtube')} className="btn-primary flex-1">YouTube</button>
-            </div>
+            {pendingGen.action === 'image' || pendingGen.action === 'regenImage' ? (
+              <>
+                <p className="mb-5 text-xs text-brand-muted">Images publish to <span className="font-medium">Meta only</span>. YouTube is video-only - use <span className="font-medium">Generate video</span> for YouTube.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mb-5 text-xs text-brand-muted">Meta renders 9:16. YouTube renders a 9:16 Short + a 16:9 in-stream video.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
+                  <button onClick={() => runPending('youtube')} className="btn-primary flex-1">YouTube</button>
+                </div>
+              </>
+            )}
             <button onClick={closePicker} className="mt-4 text-xs text-brand-muted hover:text-brand-dark">Cancel</button>
           </div>
         </div>,

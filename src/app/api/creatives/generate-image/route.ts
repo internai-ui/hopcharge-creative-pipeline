@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
   try {
     const { ideaId, regenerate, platform, manual } = await req.json()
     const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
+    // YouTube publishes video only (videos.insert can't take a still), so an image
+    // creative can never be posted there. Reject it up front instead of letting a
+    // dead-end creative be created and then fail at publish time.
+    if (targetPlatform === 'youtube') {
+      return Response.json(
+        { error: 'YouTube publishes video only - generate a video for YouTube. Images can only be published to Meta.' },
+        { status: 400 },
+      )
+    }
     // The Ideas-page toggle sends an explicit boolean that overrides the env default.
     const useManual = typeof manual === 'boolean' ? manual : process.env.IMAGE_GENERATOR === 'manual'
 
