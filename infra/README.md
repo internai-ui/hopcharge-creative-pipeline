@@ -53,8 +53,8 @@ DATABASE_URL=postgresql://hopcharge:...@...rds.amazonaws.com:5432/hopcharge?sslm
 
 Paste that block into **Vercel → Settings → Environment Variables**. These six values
 are everything the app needs **from AWS** (S3 storage + the database). The Meta,
-Google Ads / YouTube, and Google sign-in variables are configured separately (see the
-repo's `.env.example`) - this stack does not touch them.
+YouTube, and Google sign-in variables are configured separately (see the repo's
+`.env.example`) - this stack does not touch them.
 
 ## One more step: create the database tables
 

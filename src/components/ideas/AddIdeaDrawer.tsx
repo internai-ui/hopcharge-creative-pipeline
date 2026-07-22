@@ -237,12 +237,12 @@ export function AddIdeaDrawer({ open, onClose, onAdded }: AddIdeaDrawerProps) {
             />
           </div>
 
-          {/* ── YouTube (Demand Gen) copy ── */}
+          {/* ── YouTube video copy ── */}
           <div className="pt-1 flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
               YouTube
             </span>
-            <span className="text-xs text-brand-muted" title="Google Ads 'Demand Gen' responsive ad copy: several short headlines/descriptions Google mixes across YouTube Shorts, in-stream and Discover.">Ad copy · Google Demand Gen - leave blank to reuse the Meta headline / primary text</span>
+            <span className="text-xs text-brand-muted" title="Becomes the YouTube video's title + description when published as a Short/video. The first headline is the title; the descriptions and CTA fill the description box.">Video title &amp; description - leave blank to reuse the Meta headline / primary text</span>
           </div>
 
           <div>

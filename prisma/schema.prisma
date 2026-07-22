@@ -292,3 +292,15 @@ model TrendKeyword {
   @@unique([lens, term])
   @@index([lens])
 }
+
+// Generic result cache for expensive-to-recompute payloads (e.g. the Claude pipeline
+// evaluation narrative). `signature` is a hash of the inputs the payload was derived
+// from: when the inputs change, the signature changes and the cached payload is
+// recomputed. Keyed by a stable logical name (e.g. "pipeline-evaluation").
+model CachedResult {
+  key       String   @id
+  signature String
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

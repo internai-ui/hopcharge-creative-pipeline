@@ -1,5 +1,12 @@
 import { prisma } from '@/lib/db'
 import { anthropic as client } from '@/lib/anthropic'
+import { createHash } from 'crypto'
+
+const CACHE_KEY = 'pipeline-evaluation'
+// The narrative is a pure function of the inputs below, so a matching signature can be
+// reused indefinitely - this soft TTL just forces an eventual refresh in case the
+// signature misses something. Default 24h; override with EVALUATION_CACHE_TTL_MS.
+const CACHE_TTL_MS = Number(process.env.EVALUATION_CACHE_TTL_MS ?? 24 * 60 * 60 * 1000)
 
 export async function GET() {
   try {
@@ -69,13 +76,43 @@ Write a structured evaluation with these sections:
 
 Be specific, reference actual ad names and metrics. No generic advice.`
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    // The prompt is a deterministic function of every input above, so its hash is a
+    // perfect cache signature: same inputs -> same prompt -> reuse the last narrative
+    // instead of paying for another Claude call on every Evaluation page load.
+    const signature = createHash('sha1').update(prompt).digest('hex')
 
-    const narrative = response.content[0].type === 'text' ? response.content[0].text : 'Evaluation unavailable.'
+    let narrative: string | null = null
+    let cached = false
+    try {
+      const row = await prisma.cachedResult.findUnique({ where: { key: CACHE_KEY } })
+      if (row && row.signature === signature && Date.now() - row.updatedAt.getTime() < CACHE_TTL_MS) {
+        const payload = row.payload as { narrative?: string } | null
+        if (payload?.narrative) {
+          narrative = payload.narrative
+          cached = true
+        }
+      }
+    } catch {
+      // CachedResult table missing or a transient db error - fall through and compute live.
+    }
+
+    if (!narrative) {
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }],
+      })
+      narrative = response.content[0].type === 'text' ? response.content[0].text : 'Evaluation unavailable.'
+      try {
+        await prisma.cachedResult.upsert({
+          where: { key: CACHE_KEY },
+          create: { key: CACHE_KEY, signature, payload: { narrative } },
+          update: { signature, payload: { narrative } },
+        })
+      } catch {
+        // Best-effort cache write; ignore if the table isn't present yet.
+      }
+    }
 
     return Response.json({
       summary: {
@@ -88,6 +125,7 @@ Be specific, reference actual ad names and metrics. No generic advice.`
       },
       actions,
       narrative,
+      cached,
     })
   } catch (err) {
     return Response.json({ error: 'Evaluation failed', details: String(err) }, { status: 500 })

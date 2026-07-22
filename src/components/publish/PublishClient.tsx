@@ -352,9 +352,9 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
             onClick={handleReconcile}
             disabled={reconciling}
             className="text-sm border border-brand-border hover:border-brand text-brand-muted hover:text-brand px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            title="Check Meta Ads Manager and flag any ads deleted there"
+            title="Check Meta Ads Manager + YouTube and flag anything deleted there"
           >
-            {reconciling ? 'Refreshing…' : 'Refresh from Meta'}
+            {reconciling ? 'Refreshing…' : 'Refresh status'}
           </button>
           <div className="flex rounded-lg border border-brand-border overflow-hidden text-sm">
             {([['all', 'All'], ['meta', 'Meta'], ['youtube', 'YouTube']] as const).map(([p, label]) => (
@@ -396,7 +396,9 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                     {(post.platformMetadata as { draft?: boolean } | null)?.draft && post.status === 'posted' && (
                       <span
                         className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200"
-                        title="Saved as a paused draft on Meta (META_DRAFT_MODE) - not delivering"
+                        title={post.platform === 'youtube'
+                          ? 'Uploaded as a private video - only you can see it, nothing is public'
+                          : 'Saved as a paused draft on Meta (META_DRAFT_MODE) - not delivering'}
                       >
                         Draft
                       </span>
@@ -448,7 +450,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                   )}
                   {post.status === 'deleted' && (
                     <>
-                      <span className="text-xs text-brand-muted">Deleted on Meta</span>
+                      <span className="text-xs text-brand-muted">{post.platform === 'youtube' ? 'Deleted on YouTube' : 'Deleted on Meta'}</span>
                       <button
                         onClick={() => handleDeletePost(post.id)}
                         className="text-brand-muted hover:text-red-500 p-1.5 rounded-lg transition-colors"
@@ -582,23 +584,29 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 </button>
               </div>
               <p className="mt-1 text-xs text-brand-muted">
-                {draft ? 'Saves a PAUSED draft on the platform - nothing goes live or spends.' : 'Publishes a LIVE ad - it will serve and spend budget.'}
+                {confirmCreative?.platform === 'youtube'
+                  ? (draft ? 'Uploads a private video - only you can see it; nothing is public.' : 'Publishes a public video (a Short) to your channel.')
+                  : (draft ? 'Saves a PAUSED draft on the platform - nothing goes live or spends.' : 'Publishes a LIVE ad - it will serve and spend budget.')}
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-brand-dark mb-1.5">
-                Schedule <span className="font-normal text-brand-muted">(leave empty to post now)</span>
-              </label>
-              <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
-              {confirmCreative?.platform === 'youtube' && (
-                <p className="mt-1 text-xs text-amber-700">
-                  YouTube (Demand Gen) publishes immediately - the API has no per-ad start time or day-parting.
-                  Set delivery schedules on the campaign in Google Ads.
+            {confirmCreative?.platform === 'youtube' ? (
+              <div className="bg-brand-surface/60 border border-brand-border rounded-lg px-3 py-2.5">
+                <p className="text-xs text-brand-muted">
+                  YouTube videos publish immediately to your channel - there is no ad scheduling or day-parting.
+                  Use <span className="font-medium">Draft</span> to upload privately first, then flip it to public when you are ready.
                 </p>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1.5">
+                  Schedule <span className="font-normal text-brand-muted">(leave empty to post now)</span>
+                </label>
+                <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
+              </div>
+            )}
 
+            {confirmCreative?.platform !== 'youtube' && (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -663,6 +671,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 </div>
               )}
             </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-sm text-red-600">{error}</div>

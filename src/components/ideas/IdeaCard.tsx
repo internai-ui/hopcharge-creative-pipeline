@@ -347,16 +347,16 @@ export function IdeaCard({
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headline</span>
         <div>{renderEditableText('headline')}</div>
 
-        {/* ── YouTube (Demand Gen) copy - read-only; distinct from the Meta copy above ── */}
+        {/* ── YouTube video copy - read-only; distinct from the Meta copy above ── */}
         <div className="col-span-2 mt-1.5 pt-2.5 border-t border-brand-border/70 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
             YouTube
           </span>
           <span
             className="text-[11px] text-brand-muted cursor-help"
-            title="Google Ads 'Demand Gen' responsive ad copy: several short headlines (≤40) and descriptions (≤90) that Google mixes and matches across YouTube Shorts, in-stream and Discover."
+            title="Becomes the YouTube video's title + description when the creative is published to your channel as a Short/video. The punchiest headline is the title; the descriptions and CTA fill the description box."
           >
-            Ad copy · Google Demand Gen
+            Video title &amp; description
           </span>
         </div>
 

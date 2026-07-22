@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { googleAdsConfigured, googleAdsAccessToken, googleAdsSearch } from '@/lib/plugins/google-ads/client'
+import { youtubeConfigured, youtubeAccessToken, youtubeGet, chunk, isRealYouTubeVideoId } from '@/lib/plugins/youtube/client'
 
 const BASE = 'https://graph.facebook.com/v21.0'
 
@@ -71,41 +71,36 @@ async function reconcileMetaPosts(): Promise<ReconcileResult> {
   return { checked, deletedPostIds }
 }
 
-// One GAQL row from the ad-status query.
-interface AdStatusRow {
-  adGroupAd?: { status?: string; ad?: { id?: string } }
-}
-
 /**
- * Reconcile published YouTube (Google Ads Demand Gen) posts. A Demand Gen ad that
- * was removed in Google Ads reports `ad_group_ad.status = REMOVED`; we mark the
- * local post "deleted" to mirror the Meta reconcile. Absence from the result set is
- * treated as transient (not deletion), so a query hiccup never wrongly flags an ad.
+ * Reconcile published YouTube posts against the channel. We ask the Data API which
+ * of our video ids still exist (videos.list?part=id); owner-authenticated list
+ * returns private videos too, so an id MISSING from the response genuinely means the
+ * video was deleted (or pulled for a strike). A failed query is treated as transient
+ * (no deletions that run), so a hiccup never wrongly flags a video.
  */
 async function reconcileYouTubePosts(): Promise<ReconcileResult> {
   const deletedPostIds: string[] = []
 
-  // Only meaningful when Google Ads credentials are configured.
-  if (!googleAdsConfigured()) return { checked: 0, deletedPostIds }
+  // Only meaningful when the YouTube Data API credentials are configured.
+  if (!youtubeConfigured()) return { checked: 0, deletedPostIds }
 
   const posts = await prisma.post.findMany({
     where: { status: 'posted', platform: 'youtube', externalPostId: { not: null } },
     select: { id: true, externalPostId: true },
   })
-  const ids = posts.map((p) => p.externalPostId!).filter(isRealNumericAdId)
+  const ids = posts.map((p) => p.externalPostId!).filter(isRealYouTubeVideoId)
   if (ids.length === 0) return { checked: 0, deletedPostIds }
 
-  const statusById = new Map<string, string>()
+  const existing = new Set<string>()
   try {
-    const token = await googleAdsAccessToken()
-    const idList = ids.map((id) => `'${id}'`).join(', ')
-    const rows = await googleAdsSearch<AdStatusRow>(
-      `SELECT ad_group_ad.ad.id, ad_group_ad.status FROM ad_group_ad WHERE ad_group_ad.ad.id IN (${idList})`,
-      token,
-    )
-    for (const r of rows) {
-      const id = r.adGroupAd?.ad?.id
-      if (id) statusById.set(String(id), r.adGroupAd?.status ?? '')
+    const token = await youtubeAccessToken()
+    for (const group of chunk(ids, 50)) {
+      const data = await youtubeGet<{ items?: { id?: string }[] }>(
+        'videos',
+        { part: 'id', id: group.join(','), maxResults: '50' },
+        token,
+      )
+      for (const item of data.items ?? []) if (item.id) existing.add(item.id)
     }
   } catch {
     // Network/transient error - leave posts untouched, try again next run.
@@ -114,16 +109,16 @@ async function reconcileYouTubePosts(): Promise<ReconcileResult> {
 
   let checked = 0
   for (const post of posts) {
-    const adId = post.externalPostId!
-    if (!isRealNumericAdId(adId)) continue
+    const videoId = post.externalPostId!
+    if (!isRealYouTubeVideoId(videoId)) continue
     checked++
-    if (statusById.get(adId) === 'REMOVED') {
+    if (!existing.has(videoId)) {
       await prisma.post.update({ where: { id: post.id }, data: { status: 'deleted' } })
       deletedPostIds.push(post.id)
       await prisma.agentAction.create({
         data: {
           actionType: 'post_deleted_on_youtube',
-          decisionRationale: `Ad ${adId} (post ${post.id}) was removed in Google Ads - marked deleted in the pipeline.`,
+          decisionRationale: `Video ${videoId} (post ${post.id}) no longer exists on YouTube - marked deleted in the pipeline.`,
           relatedEntityId: post.id,
         },
       })

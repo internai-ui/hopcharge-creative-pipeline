@@ -1,85 +1,61 @@
 import type { AnalyticsPlugin, PerformanceSnapshot } from '../interfaces'
 import { Decimal } from '@prisma/client/runtime/client'
-import { googleAdsAccessToken, googleAdsSearch } from '../google-ads/client'
+import { youtubeAccessToken, youtubeGet, chunk } from './client'
 
-// ── YouTube analytics (Google Ads reporting) ─────────────────────────────────
+// ── YouTube analytics (YouTube Data API v3 - organic video statistics) ────────
 //
-// The Meta equivalent - MetaAnalytics - hits the Graph insights API; the YouTube
-// equivalent queries the Google Ads reporting API (GAQL) for the Demand Gen ads we
-// published. Same shape (AnalyticsPlugin), same output (a PerformanceSnapshot per
-// ad), same lead-based model: conversions = leads, cost / conversions = CPL (₹).
+// These are organic YouTube videos, not paid ads: there is no spend, no leads and
+// no cost-per-lead. videos.list?part=statistics returns each video's LIFETIME
+// cumulative counters (views, likes, comments), so every daily snapshot records the
+// running total on that date and the history chart shows the growth curve. (True
+// per-day deltas would need the YouTube Analytics API + the yt-analytics.readonly
+// scope; the Data API is used here to keep the scope surface small and the call free.)
 //
-// Parity notes with MetaAnalytics:
-//   • fetchPerformanceBatch: one `WHERE ad_group_ad.ad.id IN (...)` GAQL call covers
-//     many ads at once, mirroring Meta's account-level /insights?level=ad batch.
-//   • metrics aggregate over the date range (segments.date is filtered but NOT
-//     selected), so each ad yields a single snapshot - exactly like Meta's time_range.
+// Mapping onto the shared PerformanceSnapshot (a lead/CPL shape built for Meta):
+//   impressions = viewCount     (closest organic analogue to ad impressions)
+//   clicks      = likeCount      (engagement proxy; YouTube has no link-click metric)
+//   ctr         = likes / views  (engagement rate, kept in the 0-1 ctr field)
+//   leads = 0, spend = 0, cpl = null, cpm = 0, reach = 0, frequency = 0  (no ads)
+// The full statistics object (views/likes/comments/favorites) is kept in rawData.
 //
-// Caveat: every ad this app publishes is PAUSED (a draft), and paused ads never
-// serve, so they report zeros until someone activates them in Google Ads. Google Ads
-// has no ad-level reach/frequency for Demand Gen, so those are left at 0.
+// Parity with MetaAnalytics: fetchPerformanceBatch does one videos.list?id=a,b,c
+// call per 50 ids (the Data API cap), mirroring Meta's account-level batch.
 
 type Snapshot = Omit<PerformanceSnapshot, 'id' | 'createdAt' | 'postId'>
 
-// A single GAQL result row (REST returns camelCase; metrics come back as strings).
-interface AdRow {
-  adGroupAd?: { ad?: { id?: string } }
-  metrics?: {
-    impressions?: string
-    clicks?: string
-    costMicros?: string
-    conversions?: number | string
-    ctr?: number | string
-    averageCpm?: string
+interface VideoRow {
+  id?: string
+  statistics?: {
+    viewCount?: string
+    likeCount?: string
+    commentCount?: string
+    favoriteCount?: string
   }
 }
 
-function rowToSnapshot(row: AdRow, snapshotDate: Date): Snapshot {
-  const m = row.metrics ?? {}
-  const impressions = parseInt(String(m.impressions ?? '0'))
-  const clicks = parseInt(String(m.clicks ?? '0'))
-  const spend = Number(m.costMicros ?? 0) / 1_000_000 // micros → account currency (₹)
-  const leads = Math.round(Number(m.conversions ?? 0)) // conversions == leads (WhatsApp)
-  const cpl = leads > 0 ? spend / leads : null
+function rowToSnapshot(row: VideoRow, snapshotDate: Date): Snapshot {
+  const s = row.statistics ?? {}
+  const views = parseInt(String(s.viewCount ?? '0')) || 0
+  const likes = parseInt(String(s.likeCount ?? '0')) || 0
+  const engagementRate = views > 0 ? likes / views : 0
 
   return {
     snapshotDate,
-    impressions,
-    reach: 0, // Demand Gen has no ad-level reach in GAQL
-    clicks,
-    spend: new Decimal(spend.toFixed(2)),
-    cpl: cpl != null ? new Decimal(cpl.toFixed(2)) : null,
-    leads,
-    cpm: new Decimal((Number(m.averageCpm ?? 0) / 1_000_000).toFixed(4)), // micros → ₹
-    ctr: new Decimal(Number(m.ctr ?? 0).toFixed(6)), // already a 0–1 ratio
-    frequency: new Decimal('0'), // not available at ad level for Demand Gen
+    impressions: views,
+    reach: 0, // Data API has no unique-viewer count
+    clicks: likes,
+    spend: new Decimal('0'), // organic - no spend
+    cpl: null, // organic - no cost per lead
+    leads: 0, // organic - no lead conversions
+    cpm: new Decimal('0'),
+    ctr: new Decimal(engagementRate.toFixed(6)), // likes / views as an engagement proxy
+    frequency: new Decimal('0'),
     rawData: row as unknown as Snapshot['rawData'],
   }
 }
 
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
-  return out
-}
-
-function gaqlDate(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
-
 export class YouTubeAnalytics implements AnalyticsPlugin {
   name = 'youtube'
-
-  private query(ids: string[], dateRange: { from: Date; to: Date }): string {
-    const idList = ids.map((id) => `'${id}'`).join(', ')
-    return (
-      'SELECT ad_group_ad.ad.id, metrics.impressions, metrics.clicks, metrics.cost_micros, ' +
-      'metrics.conversions, metrics.ctr, metrics.average_cpm ' +
-      'FROM ad_group_ad ' +
-      `WHERE ad_group_ad.ad.id IN (${idList}) ` +
-      `AND segments.date BETWEEN '${gaqlDate(dateRange.from)}' AND '${gaqlDate(dateRange.to)}'`
-    )
-  }
 
   async fetchPerformance({
     externalPostId,
@@ -88,14 +64,19 @@ export class YouTubeAnalytics implements AnalyticsPlugin {
     externalPostId: string
     dateRange: { from: Date; to: Date }
   }): Promise<Snapshot> {
-    const token = await googleAdsAccessToken()
-    const rows = await googleAdsSearch<AdRow>(this.query([externalPostId], dateRange), token)
-    if (rows.length === 0) throw new Error(`Google Ads returned no data for ad ${externalPostId}`)
-    return rowToSnapshot(rows[0], dateRange.from)
+    const token = await youtubeAccessToken()
+    const data = await youtubeGet<{ items?: VideoRow[] }>(
+      'videos',
+      { part: 'statistics', id: externalPostId },
+      token,
+    )
+    const item = data.items?.[0]
+    if (!item) throw new Error(`YouTube returned no data for video ${externalPostId}`)
+    return rowToSnapshot(item, dateRange.to)
   }
 
-  // Batch: one GAQL `IN (...)` call per chunk of ad ids, keyed by ad id. Ads with no
-  // delivery in the window simply have no entry (mirrors MetaAnalytics batch).
+  // Batch: one videos.list?id=... call per 50 ids, keyed by video id. Videos that
+  // no longer exist simply have no entry (mirrors MetaAnalytics batch semantics).
   async fetchPerformanceBatch({
     externalPostIds,
     dateRange,
@@ -107,12 +88,15 @@ export class YouTubeAnalytics implements AnalyticsPlugin {
     const ids = externalPostIds.filter(Boolean)
     if (ids.length === 0) return result
 
-    const token = await googleAdsAccessToken()
-    for (const group of chunk(ids, 500)) {
-      const rows = await googleAdsSearch<AdRow>(this.query(group, dateRange), token)
-      for (const row of rows) {
-        const id = row.adGroupAd?.ad?.id
-        if (id) result.set(String(id), rowToSnapshot(row, dateRange.from))
+    const token = await youtubeAccessToken()
+    for (const group of chunk(ids, 50)) {
+      const data = await youtubeGet<{ items?: VideoRow[] }>(
+        'videos',
+        { part: 'statistics', id: group.join(','), maxResults: '50' },
+        token,
+      )
+      for (const item of data.items ?? []) {
+        if (item.id) result.set(item.id, rowToSnapshot(item, dateRange.to))
       }
     }
     return result
