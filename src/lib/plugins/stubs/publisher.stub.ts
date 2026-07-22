@@ -25,6 +25,10 @@ export class PublisherStub implements PublisherPlugin {
     await new Promise((r) => setTimeout(r, 100))
   }
 
+  async resume(_externalPostId: string): Promise<void> {
+    await new Promise((r) => setTimeout(r, 100))
+  }
+
   async scale(_externalPostId: string, _budgetMultiplier: number): Promise<void> {
     await new Promise((r) => setTimeout(r, 100))
   }

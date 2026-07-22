@@ -342,6 +342,19 @@ export class MetaPublisher implements PublisherPlugin {
     })
   }
 
+  // Reverse of pause(): set the ad ACTIVE again so it resumes delivery. (The ad set
+  // stays ACTIVE from publish, so re-activating the ad is enough.)
+  async resume(externalPostId: string): Promise<void> {
+    await fetch(`${BASE}/${externalPostId}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'ACTIVE' }),
+    })
+  }
+
   async scale(externalPostId: string, budgetMultiplier: number): Promise<void> {
     // Budget lives on the ad set, not the ad - look up adset_id first
     const adRes = await fetch(

@@ -159,23 +159,31 @@ export class YouTubePublisher implements PublisherPlugin {
     return data.id as string
   }
 
-  // ── Pause = unpublish (flip the video back to private) ──────────────────────
-  // videos.update overwrites the whole status part, so read the current status
-  // first and only change privacyStatus - this preserves madeForKids / publishAt.
+  // ── Pause = unpublish (flip the video to private); resume = back to public ──
   async pause(externalPostId: string): Promise<void> {
+    await this.setPrivacy(externalPostId, 'private')
+  }
+
+  async resume(externalPostId: string): Promise<void> {
+    await this.setPrivacy(externalPostId, 'public')
+  }
+
+  // videos.update overwrites the whole status part, so read the current status first
+  // and only change privacyStatus - this preserves madeForKids / publishAt / etc.
+  private async setPrivacy(externalPostId: string, privacyStatus: 'private' | 'public'): Promise<void> {
     const token = await youtubeAccessToken()
     const current = await fetch(`${DATA_API}/videos?part=status&id=${externalPostId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     const currentData = await current.json()
-    const status = { ...(currentData?.items?.[0]?.status ?? {}), privacyStatus: 'private' }
+    const status = { ...(currentData?.items?.[0]?.status ?? {}), privacyStatus }
 
     const res = await fetch(`${DATA_API}/videos?part=status`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: externalPostId, status }),
     })
-    if (!res.ok) throw new Error(`YouTube pause (set private) failed: ${res.status} ${await res.text()}`)
+    if (!res.ok) throw new Error(`YouTube set privacyStatus=${privacyStatus} failed: ${res.status} ${await res.text()}`)
   }
 
   // Organic videos have no budget, so there is nothing to scale. Kept for parity

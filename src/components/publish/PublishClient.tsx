@@ -139,6 +139,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [postingCreativeIds, setPostingCreativeIds] = useState<Set<string>>(new Set())
   const [publishingPostId, setPublishingPostId] = useState<string | null>(null)
   const [pausingPostId, setPausingPostId] = useState<string | null>(null)
+  const [resumingPostId, setResumingPostId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube'>('all')
   const [reconciling, setReconciling] = useState(false)
@@ -288,6 +289,18 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
       setPosts(allPosts)
     } finally {
       setPausingPostId(null)
+    }
+  }, [])
+
+  // Reverse of pause: re-activate a paused post (Meta -> ACTIVE, YouTube -> public).
+  const handleResumePost = useCallback(async (postId: string) => {
+    setResumingPostId(postId)
+    try {
+      await fetch(`/api/posts/${postId}/resume`, { method: 'POST' })
+      const allPosts = await fetch('/api/posts').then((r) => r.json())
+      setPosts(allPosts)
+    } finally {
+      setResumingPostId(null)
     }
   }, [])
 
@@ -454,6 +467,16 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                       title={post.platform === 'youtube' ? 'Make the video private (take it down)' : 'Pause the ad on Meta (stop delivery)'}
                     >
                       {pausingPostId === post.id ? 'Pausing...' : post.platform === 'youtube' ? 'Unpublish' : 'Pause'}
+                    </button>
+                  )}
+                  {post.status === 'posted' && (post.platformMetadata as { paused?: boolean } | null)?.paused && (
+                    <button
+                      onClick={() => handleResumePost(post.id)}
+                      disabled={resumingPostId === post.id}
+                      className="text-sm border border-brand-border hover:border-emerald-400 text-brand-muted hover:text-emerald-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      title={post.platform === 'youtube' ? 'Make the video public again' : 'Resume the ad on Meta (restart delivery)'}
+                    >
+                      {resumingPostId === post.id ? 'Resuming...' : post.platform === 'youtube' ? 'Republish' : 'Resume'}
                     </button>
                   )}
                   {post.status === 'queued' && (

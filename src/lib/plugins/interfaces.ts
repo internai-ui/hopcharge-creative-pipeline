@@ -139,7 +139,10 @@ export interface PublisherPlugin {
     // env: true = create the ad PAUSED (draft), false = create it live.
     draft?: boolean
   }): Promise<{ externalPostId: string; isDraft?: boolean }>
+  // Take a live post down: Meta sets the ad PAUSED, YouTube flips the video to private.
   pause(externalPostId: string): Promise<void>
+  // Reverse of pause(): Meta sets the ad ACTIVE, YouTube flips the video back to public.
+  resume(externalPostId: string): Promise<void>
   scale(externalPostId: string, budgetMultiplier: number): Promise<void>
 }
 
