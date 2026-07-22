@@ -25,6 +25,7 @@ export class AnalyticsStub implements AnalyticsPlugin {
       cpm: new Decimal(((spend / impressions) * 1000).toFixed(4)),
       ctr: new Decimal((clicks / impressions).toFixed(6)),
       frequency: new Decimal((1 + Math.random() * 3).toFixed(4)),
+      commentsCount: null,
       rawData: { source: 'stub' },
     }
   }

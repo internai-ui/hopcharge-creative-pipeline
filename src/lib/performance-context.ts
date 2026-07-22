@@ -1,17 +1,22 @@
 import { prisma } from './db'
 import type { PerformanceContext, AdConcepts } from './plugins/interfaces'
 import type { Idea, PerformanceSnapshot } from '@prisma/client'
+import { youtubeEngagementRate, classifyYoutubeSuccess } from './youtube-metrics'
 
 function getSnapshotCpl(snap: PerformanceSnapshot): number | null {
   return snap.cpl != null ? Number(snap.cpl) : null
 }
 
+// Meta-only: CPL/spend/isSuccessful don't exist for an organic YouTube upload, and
+// since youtube-historical.ts now classifies YouTube rows too (via engagement rate,
+// see youtube-metrics.ts), an unscoped isSuccessful:true query would pull in
+// successful YouTube videos here with a null cpl - scope to Meta explicitly.
 async function fetchHistoricalBaseline(): Promise<PerformanceContext['historicalBaseline']> {
   try {
     // prisma.historicalAd is available after db:generate + db:push
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = await (prisma as any).historicalAd.findMany({
-      where: { isSuccessful: true },
+      where: { platform: 'meta', isSuccessful: true },
       orderBy: { cpl: 'asc' },
       take: 10,
       select: { adName: true, bodyText: true, cpl: true, concepts: true },
@@ -44,18 +49,19 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
 
   type PostItem = typeof posts[number]
 
-  const withMetrics = posts
-    .filter((p: PostItem) => p.snapshots.length > 0)
+  // ── Meta: ranked on CPL (lower is better) - unchanged from before ──────────
+  const metaWithMetrics = posts
+    .filter((p: PostItem) => p.platform === 'meta' && p.snapshots.length > 0)
     .map((p: PostItem) => {
-      const totalSpend = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.spend), 0)
+      const totalSpend = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.spend ?? 0), 0)
       const cplValues = p.snapshots.map(getSnapshotCpl).filter((v): v is number => v != null && v > 0)
       // Lower CPL is better; posts with no lead data sort last (Infinity).
       const avgCpl = cplValues.length ? cplValues.reduce((s, v) => s + v, 0) / cplValues.length : Infinity
-      const avgCtr = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.ctr), 0) / p.snapshots.length
+      const avgCtr = p.snapshots.reduce((s: number, snap: PerformanceSnapshot) => s + Number(snap.ctr ?? 0), 0) / p.snapshots.length
 
       let daysToFatigue: number | null = null
       for (let i = 1; i < p.snapshots.length; i++) {
-        const freq = Number(p.snapshots[i].frequency)
+        const freq = Number(p.snapshots[i].frequency ?? 0)
         const initialCpl = getSnapshotCpl(p.snapshots[0])
         const currentCpl = getSnapshotCpl(p.snapshots[i])
         const cplRose = initialCpl != null && initialCpl > 0 && currentCpl != null && currentCpl / initialCpl > 1.3
@@ -67,39 +73,90 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
 
       return { post: p, avgCpl, avgCtr, totalSpend, daysToFatigue }
     })
-    .sort((a: { avgCpl: number }, b: { avgCpl: number }) => a.avgCpl - b.avgCpl)
+    .sort((a, b) => a.avgCpl - b.avgCpl)
 
-  type MetricItem = typeof withMetrics[number]
+  type MetaMetricItem = typeof metaWithMetrics[number]
 
-  const topThree = withMetrics.slice(0, 3)
-  const bottomThree = withMetrics.slice(-3).reverse()
-  const fatiguers = withMetrics.filter((m: MetricItem): m is MetricItem & { daysToFatigue: number } => m.daysToFatigue !== null)
+  const metaTop3 = metaWithMetrics.slice(0, 3)
+  const metaBottom3 = metaWithMetrics.slice(-3).reverse()
+  const fatiguers = metaWithMetrics.filter((m): m is MetaMetricItem & { daysToFatigue: number } => m.daysToFatigue !== null)
+
+  // ── YouTube: ranked on engagement rate (higher is better) - see youtube-metrics.ts.
+  // The Data API's view/like/comment counters are LIFETIME cumulative totals, not
+  // daily deltas (unlike Meta's spend/impressions), so the latest snapshot IS the
+  // current total - summing across snapshots would multiply-count it.
+  const youtubeWithMetrics = posts
+    .filter((p: PostItem) => p.platform === 'youtube' && p.snapshots.length > 0)
+    .map((p: PostItem) => {
+      const latest = p.snapshots[p.snapshots.length - 1] // asc order -> last is most recent
+      const views = latest.impressions
+      const likes = latest.clicks
+      const comments = latest.commentsCount ?? 0
+      return {
+        post: p,
+        views,
+        engagementRate: youtubeEngagementRate(views, likes, comments),
+        classification: classifyYoutubeSuccess(views, likes, comments),
+      }
+    })
+    // Too few views to classify either way - exclude from both ends rather than
+    // let a brand-new video's noisy rate masquerade as a top or poor performer.
+    .filter((m) => m.classification !== null)
+    .sort((a, b) => b.engagementRate - a.engagementRate)
+
+  const youtubeTop3 = youtubeWithMetrics.slice(0, 3)
+  const youtubePoor3 = youtubeWithMetrics.slice(-3).reverse()
 
   const topPerformerDetails: PerformanceContext['topPerformers'] = []
   const poorPerformerDetails: PerformanceContext['poorPerformers'] = []
 
-  // Derive patterns directly from data - no Claude call needed here
-  let winningPatterns: string[] = topThree.length > 0
-    ? [...new Set(topThree.map((m: MetricItem) => m.post.creative.idea.angle))].slice(0, 3)
+  // Derive patterns directly from data across BOTH platforms - no Claude call needed.
+  const topAngles = [...metaTop3.map((m) => m.post.creative.idea.angle), ...youtubeTop3.map((m) => m.post.creative.idea.angle)]
+  const winningPatterns: string[] = topAngles.length > 0
+    ? [...new Set(topAngles)].slice(0, 4)
     : ['hook_first_3_seconds', 'ugc_style', 'pain_point_angle']
 
   let patternsToAvoid: string[] = ['overly_polished', 'no_captions', 'long_form']
 
-  for (const m of topThree) {
+  for (const m of metaTop3) {
     topPerformerDetails.push({
       idea: m.post.creative.idea as Idea,
-      cpl: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
+      platform: 'meta',
+      metric: 'cpl',
+      metricValue: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
       ctr: m.avgCtr,
       fatigueRate: m.daysToFatigue !== null && m.daysToFatigue < 7 ? 'fast' : m.daysToFatigue !== null ? 'slow' : 'none',
       patterns: winningPatterns,
     })
   }
+  for (const m of youtubeTop3) {
+    topPerformerDetails.push({
+      idea: m.post.creative.idea as Idea,
+      platform: 'youtube',
+      metric: 'engagementRate',
+      metricValue: m.engagementRate,
+      ctr: m.engagementRate,
+      fatigueRate: 'none', // frequency/fatigue is a paid-delivery concept - N/A organically
+      patterns: winningPatterns,
+    })
+  }
 
-  for (const m of bottomThree) {
+  for (const m of metaBottom3) {
     poorPerformerDetails.push({
       idea: m.post.creative.idea as Idea,
-      cpl: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
+      platform: 'meta',
+      metric: 'cpl',
+      metricValue: Number.isFinite(m.avgCpl) ? m.avgCpl : 0,
       failureHypothesis: `High CPL of ₹${Number.isFinite(m.avgCpl) ? m.avgCpl.toFixed(0) : '-'} with angle "${m.post.creative.idea.angle}"`,
+    })
+  }
+  for (const m of youtubePoor3) {
+    poorPerformerDetails.push({
+      idea: m.post.creative.idea as Idea,
+      platform: 'youtube',
+      metric: 'engagementRate',
+      metricValue: m.engagementRate,
+      failureHypothesis: `Low engagement rate of ${m.engagementRate.toFixed(1)}% (${m.views.toLocaleString()} views) with angle "${m.post.creative.idea.angle}"`,
     })
   }
 
@@ -115,9 +172,9 @@ export async function assemblePerformanceContext(): Promise<PerformanceContext> 
   return {
     topPerformers: topPerformerDetails,
     poorPerformers: poorPerformerDetails,
-    fastFatiguers: fatiguers.map((m: MetricItem & { daysToFatigue: number }) => ({
+    fastFatiguers: fatiguers.map((m) => ({
       idea: m.post.creative.idea as Idea,
-      daysToFatigue: m.daysToFatigue,
+      daysToFatigue: m.daysToFatigue as number,
     })),
     winningPatterns,
     patternsToAvoid,

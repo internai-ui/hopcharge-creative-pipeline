@@ -32,6 +32,10 @@ const ANGLES = [
 
 const ANGLE_DROPDOWN = ANGLES.map(a => ({ value: a, label: a.replace(/_/g, ' ') }))
 
+// Google Ads (YouTube Demand Gen) call-to-action enum - see idea-generator.ts field rules.
+const YT_CTAS = ['LEARN_MORE', 'SIGN_UP', 'GET_QUOTE', 'SUBSCRIBE', 'VISIT_SITE', 'SHOP_NOW']
+const YT_CTA_DROPDOWN = YT_CTAS.map(c => ({ value: c, label: c.replace(/_/g, ' ').toLowerCase() }))
+
 // ── Floating dropdown menu ─────────────────────────────────────────────────
 
 interface MenuOption {
@@ -169,6 +173,7 @@ export function IdeaCard({
 
   const funnelRef = useRef<HTMLSpanElement>(null)
   const angleRef  = useRef<HTMLSpanElement>(null)
+  const ytCtaRef  = useRef<HTMLDivElement>(null)
 
   const isStale = idea.trendScore !== null && idea.trendScore < 0.3
 
@@ -194,6 +199,48 @@ export function IdeaCard({
       await onUpdate(idea.id, { trendTags: tags })
     }
     setEditing(null)
+  }
+
+  // ytHeadlines / ytDescriptions are string[] - edited as one line per item.
+  const commitList = async (field: 'ytHeadlines' | 'ytDescriptions', raw: string) => {
+    const items = raw.split('\n').map(s => s.trim()).filter(Boolean)
+    if (JSON.stringify(items) !== JSON.stringify(idea[field])) {
+      await onUpdate(idea.id, { [field]: items })
+    }
+    setEditing(null)
+  }
+
+  const renderEditableList = (field: 'ytHeadlines' | 'ytDescriptions', maxLen: number) => {
+    const items = idea[field]
+    if (editing === field) {
+      return (
+        <textarea
+          autoFocus
+          defaultValue={items.join('\n')}
+          onBlur={e => commitList(field, e.target.value)}
+          onKeyDown={e => { if (e.key === 'Escape') setEditing(null) }}
+          rows={Math.max(2, items.length || 2)}
+          placeholder="One per line"
+          className="w-full bg-brand-surface text-brand-dark text-sm rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-brand/20 focus:bg-white transition-colors"
+        />
+      )
+    }
+    return (
+      <div
+        className="space-y-0.5 cursor-text hover:bg-brand-surface rounded-lg px-2 -mx-2 py-1 transition-colors"
+        onClick={() => setEditing(field)}
+      >
+        {items.length ? (
+          items.map((v, i) => (
+            <div key={i} className="text-sm text-brand-dark leading-snug">
+              {v} <span className={`text-[10px] ${v.length > maxLen ? 'text-red-500' : 'text-brand-muted'}`}>({v.length})</span>
+            </div>
+          ))
+        ) : (
+          <span className="text-sm text-brand-muted italic">click to add</span>
+        )}
+      </div>
+    )
   }
 
   const renderEditableText = (field: keyof Idea, multiline = false) => {
@@ -347,7 +394,7 @@ export function IdeaCard({
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headline</span>
         <div>{renderEditableText('headline')}</div>
 
-        {/* ── YouTube video copy - read-only; distinct from the Meta copy above ── */}
+        {/* ── YouTube video copy - editable, distinct from the Meta copy above ── */}
         <div className="col-span-2 mt-1.5 pt-2.5 border-t border-brand-border/70 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
             YouTube
@@ -361,33 +408,20 @@ export function IdeaCard({
         </div>
 
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Headlines</span>
-        <div className="space-y-0.5">
-          {idea.ytHeadlines.length ? (
-            idea.ytHeadlines.map((h, i) => (
-              <div key={i} className="text-sm text-brand-dark leading-snug">
-                {h} <span className="text-[10px] text-brand-muted">({h.length})</span>
-              </div>
-            ))
-          ) : (
-            <span className="text-sm text-brand-muted italic">-</span>
-          )}
-        </div>
+        <div>{renderEditableList('ytHeadlines', 40)}</div>
 
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Descs</span>
-        <div className="space-y-0.5">
-          {idea.ytDescriptions.length ? (
-            idea.ytDescriptions.map((d, i) => (
-              <div key={i} className="text-sm text-brand-dark leading-snug">
-                {d} <span className="text-[10px] text-brand-muted">({d.length})</span>
-              </div>
-            ))
-          ) : (
-            <span className="text-sm text-brand-muted italic">-</span>
-          )}
-        </div>
+        <div>{renderEditableList('ytDescriptions', 90)}</div>
 
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">YT CTA</span>
-        <div className="text-sm text-brand-dark">{idea.ytCallToAction?.replace(/_/g, ' ').toLowerCase() ?? '-'}</div>
+        <div ref={ytCtaRef} className="flex items-center">
+          <span
+            onClick={() => setEditing(editing === 'ytCallToAction' ? null : 'ytCallToAction')}
+            className="text-xs bg-brand-surface text-brand-muted px-2 py-0.5 rounded-md capitalize cursor-pointer select-none hover:bg-brand-border hover:text-brand-dark active:scale-95 transition-all"
+          >
+            {idea.ytCallToAction?.replace(/_/g, ' ').toLowerCase() ?? 'learn more'}
+          </span>
+        </div>
 
         {/* Angle - custom dropdown trigger */}
         <span className="text-xs font-semibold text-brand-muted uppercase tracking-wide pt-1">Angle</span>
@@ -470,6 +504,15 @@ export function IdeaCard({
           options={ANGLE_DROPDOWN}
           value={idea.angle}
           onSelect={v => commitSelect('angle', v)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {editing === 'ytCallToAction' && ytCtaRef.current && (
+        <FloatingMenu
+          anchorEl={ytCtaRef.current}
+          options={YT_CTA_DROPDOWN}
+          value={idea.ytCallToAction ?? 'LEARN_MORE'}
+          onSelect={v => commitSelect('ytCallToAction', v)}
           onClose={() => setEditing(null)}
         />
       )}

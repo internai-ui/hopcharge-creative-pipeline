@@ -194,19 +194,20 @@ interface AdCreativeShape {
     thumbnail_url?: string
     object_story_spec?: {
       link_data?: { picture?: string }
-      video_data?: { image_url?: string }
+      video_data?: { image_url?: string; video_id?: string }
       photo_data?: { url?: string }
     }
   }
 }
 
-// Page through the ad account and map metaAdId -> best still URL + creative type.
+// Page through the ad account and map metaAdId -> best still URL + creative type,
+// plus the raw video id (video ads only) so the real file can be fetched separately.
 // Prefers a full image over a video thumbnail over the small generic thumbnail.
 async function fetchAdCreativeImageMap(
   token: string,
   accountId: string,
-): Promise<Map<string, { url: string; type: 'image' | 'video' }>> {
-  const map = new Map<string, { url: string; type: 'image' | 'video' }>()
+): Promise<Map<string, { url: string; type: 'image' | 'video'; videoId?: string }>> {
+  const map = new Map<string, { url: string; type: 'image' | 'video'; videoId?: string }>()
   const first = new URL(`${BASE}/act_${accountId}/ads`)
   first.searchParams.set('fields', 'id,creative{id,image_url,thumbnail_url,object_story_spec}')
   first.searchParams.set('limit', '100')
@@ -223,12 +224,25 @@ async function fetchAdCreativeImageMap(
       const fullImage = c.image_url || oss.link_data?.picture || oss.photo_data?.url
       const videoThumb = oss.video_data?.image_url
       const url = fullImage || videoThumb || c.thumbnail_url
-      if (url) map.set(ad.id, { url, type: fullImage ? 'image' : 'video' })
+      if (url) map.set(ad.id, { url, type: fullImage ? 'image' : 'video', videoId: oss.video_data?.video_id })
     }
     next = data.paging?.next ?? null
     pages++
   }
   return map
+}
+
+// Meta exposes the raw uploaded file for a video node via ?fields=source (a signed,
+// expiring CDN URL) - permissions allowing. Returns null rather than throwing so a
+// video the account can't expose a source for just falls back to its thumbnail.
+async function fetchVideoSourceUrl(videoId: string, token: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${BASE}/${videoId}?fields=source&access_token=${token}`)
+    const data = await res.json() as { source?: string; error?: { message: string } }
+    return data.source ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function importHistoricalCreativeImages(opts: { force?: boolean } = {}): Promise<CreativeImageResult> {
@@ -240,6 +254,7 @@ export async function importHistoricalCreativeImages(opts: { force?: boolean } =
 
   const db = await getPrisma()
   const rows = await db.historicalAd.findMany({
+    where: { platform: 'meta' },
     select: { id: true, metaAdId: true, creativeImagePath: true },
   }) as Array<{ id: string; metaAdId: string; creativeImagePath: string | null }>
 
@@ -255,16 +270,25 @@ export async function importHistoricalCreativeImages(opts: { force?: boolean } =
       matched++
       if (row.creativeImagePath && !opts.force) { skipped++; return }
       try {
-        const res = await fetch(hit.url)
+        // For a video ad, prefer the actual uploaded file over its thumbnail - a
+        // real video belongs in the Publish page's "Imported ads" list as a video,
+        // not just a static frame. Falls back to the thumbnail if Meta won't expose
+        // a source URL for this video (permissions, or an older/archived asset).
+        const videoSourceUrl = hit.type === 'video' && hit.videoId ? await fetchVideoSourceUrl(hit.videoId, token) : null
+        const fetchUrl = videoSourceUrl ?? hit.url
+
+        const res = await fetch(fetchUrl)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const ct = res.headers.get('content-type') ?? ''
-        const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg'
+        const ext = videoSourceUrl
+          ? (ct.includes('webm') ? 'webm' : 'mp4')
+          : (ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg')
         const buf = Buffer.from(await res.arrayBuffer())
         const path = `historical-ads/${row.metaAdId}.${ext}`
         await storage.save(path, buf)
         await db.historicalAd.update({
           where: { id: row.id },
-          data: { creativeImagePath: path, creativeSourceUrl: hit.url, creativeType: hit.type },
+          data: { creativeImagePath: path, creativeSourceUrl: fetchUrl, creativeType: hit.type },
         })
         downloaded++
       } catch {

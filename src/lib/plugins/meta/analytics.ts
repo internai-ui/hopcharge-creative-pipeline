@@ -45,6 +45,7 @@ function parseInsightRow(d: InsightRow, snapshotDate: Date): Snapshot {
     cpm: new Decimal(parseFloat(d.cpm ?? '0').toFixed(4)),
     ctr: new Decimal(parseFloat(d.ctr ?? '0').toFixed(6)),
     frequency: new Decimal(parseFloat(d.frequency ?? '0').toFixed(4)),
+    commentsCount: null, // Meta has no comment-count concept on an ad
     rawData: d as unknown as Snapshot['rawData'],
   }
 }

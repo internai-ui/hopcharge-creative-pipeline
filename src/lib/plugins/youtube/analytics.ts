@@ -14,8 +14,12 @@ import { youtubeAccessToken, youtubeGet, chunk } from './client'
 // Mapping onto the shared PerformanceSnapshot (a lead/CPL shape built for Meta):
 //   impressions = viewCount     (closest organic analogue to ad impressions)
 //   clicks      = likeCount      (engagement proxy; YouTube has no link-click metric)
+//   commentsCount = commentCount (real count, its own field - not crammed elsewhere)
 //   ctr         = likes / views  (engagement rate, kept in the 0-1 ctr field)
-//   leads = 0, spend = 0, cpl = null, cpm = 0, reach = 0, frequency = 0  (no ads)
+//   leads = 0 (no ads). spend/cpl/cpm/frequency/reach are all NULL, not zero - there
+//   is no spend, cost-per-lead, CPM, frequency, or unique-reach concept on an organic
+//   video, and a stored 0 would read as a real (if extreme) paid-ad metric on the
+//   Performance page rather than "not applicable".
 // The full statistics object (views/likes/comments/favorites) is kept in rawData.
 //
 // Parity with MetaAnalytics: fetchPerformanceBatch does one videos.list?id=a,b,c
@@ -37,19 +41,21 @@ function rowToSnapshot(row: VideoRow, snapshotDate: Date): Snapshot {
   const s = row.statistics ?? {}
   const views = parseInt(String(s.viewCount ?? '0')) || 0
   const likes = parseInt(String(s.likeCount ?? '0')) || 0
+  const comments = parseInt(String(s.commentCount ?? '0')) || 0
   const engagementRate = views > 0 ? likes / views : 0
 
   return {
     snapshotDate,
     impressions: views,
-    reach: 0, // Data API has no unique-viewer count
+    reach: null, // Data API has no unique-viewer count
     clicks: likes,
-    spend: new Decimal('0'), // organic - no spend
+    spend: null, // organic - no spend
     cpl: null, // organic - no cost per lead
     leads: 0, // organic - no lead conversions
-    cpm: new Decimal('0'),
+    cpm: null, // organic - no CPM
     ctr: new Decimal(engagementRate.toFixed(6)), // likes / views as an engagement proxy
-    frequency: new Decimal('0'),
+    frequency: null, // organic - no frequency (that's a paid-delivery concept)
+    commentsCount: comments,
     rawData: row as unknown as Snapshot['rawData'],
   }
 }

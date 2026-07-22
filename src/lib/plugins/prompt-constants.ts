@@ -92,7 +92,9 @@ export const NEGATIVE_VIDEO =
   'Western suburb, European street, American city, non-Indian architecture, ' +
   'generic white van (no branding), wrong van colour, red or green van, ' +
   'distorted faces, extra fingers, anatomical errors, ' +
-  'AI glitch artefacts, morphing faces, flickering textures'
+  'AI glitch artefacts, morphing faces, flickering textures, ' +
+  'charging cable trailing to a person, cable coiled around a hand, cable with a loose or dangling free end, ' +
+  'cable connected to no vehicle, cable plugged into an unseen or unnamed car'
 
 // NEGATIVE_IMAGE is only meaningful for models that expose a real (CFG) negative
 // prompt field. Replicate Flux has none - a
@@ -109,7 +111,9 @@ export const NEGATIVE_IMAGE =
   'Western suburb, European street, non-Indian city, ' +
   'wrong van colour, generic van, no Hopcharge branding, ' +
   'distorted hands, extra fingers, uncanny faces, ' +
-  'stock photo feel, fake smile, posed stiffness'
+  'stock photo feel, fake smile, posed stiffness, ' +
+  'charging cable trailing to a person, cable coiled around a hand, cable with a loose or dangling free end, ' +
+  'cable connected to no vehicle, cable plugged into an unseen or unnamed car'
 
 // Positive-framed quality guardrails. Baked into EVERY image prompt so the intent of
 // NEGATIVE_IMAGE reaches models with no negative-prompt field (Flux/Flyne) without
@@ -120,11 +124,44 @@ export const IMAGE_POSITIVE_GUARDRAILS =
   'authentic candid expression, clean uncluttered frame, ' +
   'no text, lettering or logos rendered in-frame (brand mark is added in post).'
 
+// A solid-colour headline band is composited over the top ~quarter of the frame in
+// post (see headline-overlay.ts / video-headline-overlay.ts) - the model never renders
+// the text itself (same reasoning as the logo), but the SHOT needs to leave that
+// region calm so the band reads as designed, not pasted over someone's face. Appended
+// to both image and video prompts.
+export const TEXT_SAFE_ZONE_GUARDRAIL =
+  'Compose with the top quarter of the frame visually simple and uncluttered (open sky, ' +
+  'a plain wall or building facade, negative space) - keep Sara\'s face, the van, and all ' +
+  'important action in the lower three-quarters of the frame, clear of the very top edge.'
+
+// The single most common accuracy failure in generated Hopcharge visuals: the
+// charging cable trailing off toward a person's hand, an off-frame/unseen vehicle,
+// or nowhere at all, instead of visibly connecting the van to the customer's EV.
+// Appended to every image/video prompt as a hard rule, not just left to whatever
+// the idea's own imageVisual/videoVisual text happened to say.
+export const CABLE_CONNECTION_GUARDRAIL =
+  'If the charging cable is visible anywhere in this shot, both its ends must be explicit and ' +
+  'in-frame: one end at the Hopcharge van\'s charge point, the other seated in the customer\'s ' +
+  'EV charge port - never trailing toward a person\'s hand or body, never running off-frame, ' +
+  'and never ending at an unseen or unnamed vehicle. If there is no room in this composition for ' +
+  'both the van and the customer\'s EV together, do not show the cable\'s free end at all - show ' +
+  'it coiled at the van (before connection) or already retracted (after).'
+
 // ── Quality / style suffixes ─────────────────────────────────────────────────
+//
+// VIDEO_QUALITY and IMAGE_QUALITY are deliberately vocabulary, not vibes: image/video
+// models (Flux, Kling, Runway, Higgsfield DOP) are far more literal than an LLM - "good
+// lighting" or "cinematic" alone means nothing specific and produces inconsistent
+// results, while a named camera/lens/light source gets executed. Each named beat in
+// videoVisual (see idea-generator.ts field rules) should carry ONE explicit camera move
+// with a stated end state ("push in, settling on her hand on the cable" - not just
+// "push in") - motion without an endpoint is where these models tend to glitch or drift.
 
 export const VIDEO_QUALITY =
   'Cinematic colour grade - warm golden-teal contrast. Shallow depth of field. ' +
-  'Smooth stabilised camera movement. High production value. 9:16 vertical format.'
+  'One deliberate camera move per shot (static lock-off, slow push/pull, pan, or handheld ' +
+  'follow) that settles on a clear end frame - never vague "smooth camera movement". ' +
+  'High production value. 9:16 vertical format.'
 
 export const IMAGE_QUALITY =
   'Shot on Sony A7 IV, 50 mm f/1.8, shallow depth of field. ' +
@@ -156,6 +193,8 @@ export function buildVideoPrompt(videoVisual: string, options: BuildVideoOptions
   return [
     videoVisual,
     `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
+    TEXT_SAFE_ZONE_GUARDRAIL,
+    CABLE_CONNECTION_GUARDRAIL,
     brief ? 'Cinematic, smooth stabilised camera, golden-hour grade, 9:16 vertical.' : VIDEO_QUALITY,
   ].join(' ')
 }
@@ -192,6 +231,8 @@ export function buildImagePrompt(imageVisual: string, options: BuildImageOptions
     imageVisual,
     `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
     IMAGE_POSITIVE_GUARDRAILS,
+    TEXT_SAFE_ZONE_GUARDRAIL,
+    CABLE_CONNECTION_GUARDRAIL,
     brief ? 'Advertising photo, 9:16 vertical, no text overlay.' : IMAGE_QUALITY,
   ].join(' ')
 }

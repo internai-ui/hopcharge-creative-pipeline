@@ -7,12 +7,15 @@ const MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
   png:  'image/png',
   webp: 'image/webp',
+  mp4:  'video/mp4',
+  webm: 'video/webm',
 }
 
-// Serve the stored creative still for a historical (imported Meta) ad. The image is
-// downloaded by POST /api/meta/import-creatives and used as the thumbnail in the
-// Publish page's "Imported from Meta" list. Mirrors the creative download route:
-// redirect to a signed S3 URL when available, otherwise stream the bytes.
+// Serve the stored creative (still or, for a Meta video ad with a real source file,
+// the actual video) for a historical imported ad - see POST /api/ads/import-creatives.
+// Used as the thumbnail/inline preview in the Publish page's "Imported ads" lists.
+// Mirrors the creative download route: redirect to a signed S3 URL when available,
+// otherwise stream the bytes.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params

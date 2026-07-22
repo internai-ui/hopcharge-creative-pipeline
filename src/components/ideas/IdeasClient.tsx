@@ -99,15 +99,19 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
   const [sortBy, setSortBy] = useState('rank')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{
-    total: number
-    withLeadData: number
-    successful: number
-    imported: number
-    errors: number
+    meta?: { total: number; withLeadData: number; successful: number; imported: number; errors: number }
+    metaError?: string
+    youtube?: { total: number; imported: number; thumbnailsDownloaded: number; errors: number }
+    youtubeError?: string
   } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [imgImporting, setImgImporting] = useState(false)
-  const [imgResult, setImgResult] = useState<{ scanned: number; matched: number; downloaded: number; skipped: number; errors: number } | null>(null)
+  const [imgResult, setImgResult] = useState<{
+    meta?: { scanned: number; matched: number; downloaded: number; skipped: number; errors: number }
+    metaError?: string
+    youtube?: { total: number; imported: number; thumbnailsDownloaded: number; errors: number }
+    youtubeError?: string
+  } | null>(null)
   const [baseline, setBaseline] = useState<{
     total: number
     successful: number
@@ -324,12 +328,14 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
       .catch(() => {})
   }, [])
 
-  const handleImportMeta = useCallback(async () => {
+  // Imports ad/video HISTORY from both platforms - Meta's paid performance (spend/
+  // CPL) and YouTube's organic channel uploads (views/likes/comments).
+  const handleImportAdHistory = useCallback(async () => {
     setImporting(true)
     setImportResult(null)
     setImportError(null)
     try {
-      const res = await fetch('/api/meta/import', { method: 'POST' })
+      const res = await fetch('/api/ads/import-history', { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
         setImportResult(data)
@@ -348,17 +354,19 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
     }
   }, [])
 
-  // Download the actual creative still/thumbnail for each imported historical Meta ad
-  // (run "Import Meta history" first). They surface as thumbnails on the Publish page.
-  const handleImportCreativeImages = useCallback(async () => {
+  // Downloads the actual creative for each imported ad/video - the real image or
+  // video file for Meta, the thumbnail for YouTube (its Data API has no video-file
+  // download endpoint; the Publish page links out to the real video instead). Run
+  // "Import ad history" first.
+  const handleImportCreativeMedia = useCallback(async () => {
     setImgImporting(true)
     setImgResult(null)
     setImportError(null)
     try {
-      const res = await fetch('/api/meta/import-creatives', { method: 'POST' })
+      const res = await fetch('/api/ads/import-creatives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
       const data = await res.json()
       if (res.ok) setImgResult(data)
-      else setImportError(data.error ?? 'Creative image import failed')
+      else setImportError(data.error ?? 'Creative media import failed')
     } catch (e) {
       setImportError(`Network error: ${String(e)}`)
     } finally {
@@ -391,9 +399,10 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
             <h2 className="mb-1 text-base font-semibold text-brand">Generate for which platform?</h2>
             {pendingGen.action === 'image' || pendingGen.action === 'regenImage' ? (
               <>
-                <p className="mb-5 text-xs text-brand-muted">Images publish to <span className="font-medium">Meta only</span>. YouTube is video-only - use <span className="font-medium">Generate video</span> for YouTube.</p>
+                <p className="mb-5 text-xs text-brand-muted">Meta posts the still as-is. YouTube turns it into a short looping video automatically (a still image can&apos;t be uploaded to YouTube directly).</p>
                 <div className="flex gap-3">
                   <button onClick={() => runPending('meta')} className="btn-primary flex-1">Meta</button>
+                  <button onClick={() => runPending('youtube')} className="btn-primary flex-1">YouTube</button>
                 </div>
               </>
             ) : (
@@ -418,20 +427,20 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
         <div className="flex flex-col items-end gap-1.5">
           <div className="flex items-center gap-2">
             <button
-              onClick={handleImportMeta}
+              onClick={handleImportAdHistory}
               disabled={importing}
-              title="Pull historical Hopcharge ads from Meta and use CPL data to seed the idea generator"
+              title="Pull ad/video history from Meta (paid CPL data) and YouTube (organic channel uploads) to seed the idea generator"
               className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
             >
-              {importing ? 'Importing...' : 'Import Meta history'}
+              {importing ? 'Importing...' : 'Import ad history'}
             </button>
             <button
-              onClick={handleImportCreativeImages}
+              onClick={handleImportCreativeMedia}
               disabled={imgImporting}
-              title="Download the actual creative still/thumbnail for each imported Meta ad (run Import Meta history first). They appear as thumbnails in the Publish page's Imported-from-Meta list."
+              title="Download the actual creative for each imported ad - the real image/video for Meta, the thumbnail (+ watch link) for YouTube. Run Import ad history first. They appear in the Publish page's Imported ads list."
               className="text-sm text-brand-muted hover:text-brand-dark border border-brand-border hover:border-brand-divider px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
             >
-              {imgImporting ? 'Importing images...' : 'Import creative images'}
+              {imgImporting ? 'Importing media...' : 'Import creative media'}
             </button>
             <button
               onClick={() => setAddDrawerOpen(true)}
@@ -472,7 +481,7 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
             </div>
           </div>
           {manualMode && (
-            <span className="text-[11px] text-right text-brand-muted max-w-[15rem]">
+            <span className="text-[11px] text-right text-brand-muted whitespace-nowrap">
               You&rsquo;ll get the prompt to run on Higgsfield, then upload the result in Review.
             </span>
           )}
@@ -526,12 +535,23 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
 
       {imgResult && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-start justify-between gap-4">
-          <p className="text-sm text-emerald-800">
-            Creative images: <span className="font-semibold">{imgResult.downloaded} downloaded</span>
-            {imgResult.skipped ? `, ${imgResult.skipped} already had one` : ''}
-            {imgResult.errors ? `, ${imgResult.errors} errors` : ''} (of {imgResult.matched} matched, {imgResult.scanned} scanned).{' '}
-            They now show in the Publish page&rsquo;s Imported-from-Meta list.
-          </p>
+          <div className="text-sm text-emerald-800 space-y-1">
+            {imgResult.meta && (
+              <p>
+                Meta: <span className="font-semibold">{imgResult.meta.downloaded} downloaded</span>
+                {imgResult.meta.skipped ? `, ${imgResult.meta.skipped} already had one` : ''}
+                {imgResult.meta.errors ? `, ${imgResult.meta.errors} errors` : ''} (of {imgResult.meta.matched} matched, {imgResult.meta.scanned} scanned).
+              </p>
+            )}
+            {imgResult.metaError && <p className="text-amber-700">Meta: {imgResult.metaError}</p>}
+            {imgResult.youtube && (
+              <p>
+                YouTube: <span className="font-semibold">{imgResult.youtube.thumbnailsDownloaded} thumbnails downloaded</span> ({imgResult.youtube.imported} videos, {imgResult.youtube.errors} errors).
+              </p>
+            )}
+            {imgResult.youtubeError && <p className="text-amber-700">YouTube: {imgResult.youtubeError}</p>}
+            <p className="text-xs text-emerald-600">They now show in the Publish page&rsquo;s Imported ads list.</p>
+          </div>
           <button onClick={() => setImgResult(null)} className="text-emerald-500 hover:text-emerald-700 text-xs shrink-0">Dismiss</button>
         </div>
       )}
@@ -541,40 +561,74 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-emerald-800">
-                Meta history imported successfully
+                Ad history imported
               </p>
               <p className="text-xs text-emerald-600 mt-0.5">
-                Idea generator baseline updated with your proven ad concepts.
+                Idea generator baseline updated with your proven Meta ad concepts.
               </p>
             </div>
             <button onClick={() => setImportResult(null)} className="text-emerald-500 hover:text-emerald-700 text-xs shrink-0">Dismiss</button>
           </div>
-          <div className="grid grid-cols-4 gap-3 mt-3">
-            {[
-              { label: 'Ads scanned', value: importResult.total },
-              { label: 'With WhatsApp data', value: importResult.withLeadData },
-              { label: 'CPL under Rs100', value: importResult.successful, highlight: true },
-              { label: 'Errors', value: importResult.errors, warn: importResult.errors > 0 },
-            ].map(({ label, value, highlight, warn }) => (
-              <div key={label} className={`rounded-lg px-3 py-2 text-center ${
-                highlight ? 'bg-emerald-100' :
-                warn && value > 0 ? 'bg-amber-50' :
-                'bg-white'
-              }`}>
-                <p className={`text-lg font-semibold tabular-nums ${
-                  highlight ? 'text-emerald-700' :
-                  warn && value > 0 ? 'text-amber-700' :
-                  'text-brand-dark'
-                }`}>{value}</p>
-                <p className="text-xs text-brand-muted mt-0.5">{label}</p>
+
+          {importResult.meta && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-emerald-700 mb-1.5">Meta (paid)</p>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { label: 'Ads scanned', value: importResult.meta.total },
+                  { label: 'With WhatsApp data', value: importResult.meta.withLeadData },
+                  { label: 'CPL under Rs100', value: importResult.meta.successful, highlight: true },
+                  { label: 'Errors', value: importResult.meta.errors, warn: importResult.meta.errors > 0 },
+                ].map(({ label, value, highlight, warn }) => (
+                  <div key={label} className={`rounded-lg px-3 py-2 text-center ${
+                    highlight ? 'bg-emerald-100' :
+                    warn && value > 0 ? 'bg-amber-50' :
+                    'bg-white'
+                  }`}>
+                    <p className={`text-lg font-semibold tabular-nums ${
+                      highlight ? 'text-emerald-700' :
+                      warn && value > 0 ? 'text-amber-700' :
+                      'text-brand-dark'
+                    }`}>{value}</p>
+                    <p className="text-xs text-brand-muted mt-0.5">{label}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          {importResult.successful === 0 && (
-            <p className="text-xs text-amber-600 mt-3">
-              No ads with CPL under Rs100 were found. The idea generator will still use your ad concepts as context, but none are marked as high-performers yet. Consider raising the threshold in .env.local (CPL_SUCCESS_THRESHOLD).
-            </p>
+              {importResult.meta.successful === 0 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  No ads with CPL under Rs100 were found. The idea generator will still use your ad concepts as context, but none are marked as high-performers yet. Consider raising the threshold in .env.local (CPL_SUCCESS_THRESHOLD).
+                </p>
+              )}
+            </div>
           )}
+          {importResult.metaError && <p className="text-xs text-amber-600 mt-3">Meta: {importResult.metaError}</p>}
+
+          {importResult.youtube && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-emerald-700 mb-1.5">YouTube (organic)</p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Videos on channel', value: importResult.youtube.total },
+                  { label: 'Imported', value: importResult.youtube.imported, highlight: true },
+                  { label: 'Errors', value: importResult.youtube.errors, warn: importResult.youtube.errors > 0 },
+                ].map(({ label, value, highlight, warn }) => (
+                  <div key={label} className={`rounded-lg px-3 py-2 text-center ${
+                    highlight ? 'bg-emerald-100' :
+                    warn && value > 0 ? 'bg-amber-50' :
+                    'bg-white'
+                  }`}>
+                    <p className={`text-lg font-semibold tabular-nums ${
+                      highlight ? 'text-emerald-700' :
+                      warn && value > 0 ? 'text-amber-700' :
+                      'text-brand-dark'
+                    }`}>{value}</p>
+                    <p className="text-xs text-brand-muted mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {importResult.youtubeError && <p className="text-xs text-amber-600 mt-3">YouTube: {importResult.youtubeError}</p>}
         </div>
       )}
 

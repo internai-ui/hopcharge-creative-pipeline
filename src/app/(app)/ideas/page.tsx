@@ -7,10 +7,10 @@ export default async function IdeasPage() {
     prisma.trendContext.findFirst({ orderBy: { createdAt: 'desc' } }),
   ])
 
-  // Default the Ideas-page generation toggle to whatever the env is configured for,
-  // so a deploy that runs in manual (copy-paste) mode starts with the toggle on.
-  const manualDefault =
-    process.env.IMAGE_GENERATOR === 'manual' || process.env.VIDEO_GENERATOR === 'manual'
+  // Manual (copy-paste) is the default generation mode - the Ideas-page toggle
+  // starts on Manual every session; switching to API generation is a per-session
+  // opt-in, not the other way round.
+  const manualDefault = true
 
   return <IdeasClient initialIdeas={ideas} latestTrend={latestTrend} manualDefault={manualDefault} />
 }

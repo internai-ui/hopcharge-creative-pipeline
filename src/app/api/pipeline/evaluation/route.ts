@@ -17,14 +17,17 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
+      // CPL-based evaluation is inherently a paid-ad (Meta) concept - YouTube rows
+      // have no cpl/spend/isSuccessful, so they're excluded rather than sorted in
+      // with nulls.
       prisma.historicalAd.findMany({
-        where: { isSuccessful: true },
+        where: { platform: 'meta', isSuccessful: true },
         orderBy: { cpl: 'asc' },
         take: 8,
         select: { adName: true, cpl: true, leads: true, spend: true, concepts: true, campaignName: true, dateFrom: true, dateTo: true },
       }),
       prisma.historicalAd.findMany({
-        where: { leads: { gt: 0 } },
+        where: { platform: 'meta', leads: { gt: 0 } },
         orderBy: { cpl: 'desc' },
         take: 8,
         select: { adName: true, cpl: true, leads: true, spend: true, concepts: true, campaignName: true },
@@ -41,11 +44,11 @@ export async function GET() {
       : 100
 
     type AdConcepts = { angle?: string; tone?: string }
-    type AdRow = { adName: string; cpl: number; leads: number; spend: number; concepts: unknown }
+    type AdRow = { adName: string; cpl: number | null; leads: number; spend: number | null; concepts: unknown }
 
     const formatAd = (a: AdRow) => {
       const c = a.concepts as AdConcepts | null
-      return `"${a.adName}" - CPL ₹${a.cpl.toFixed(0)}, ${a.leads} leads, ₹${a.spend.toFixed(0)} spend${c ? ` [angle: ${c.angle ?? '-'}, tone: ${c.tone ?? '-'}]` : ''}`
+      return `"${a.adName}" - CPL ₹${(a.cpl ?? 0).toFixed(0)}, ${a.leads} leads, ₹${(a.spend ?? 0).toFixed(0)} spend${c ? ` [angle: ${c.angle ?? '-'}, tone: ${c.tone ?? '-'}]` : ''}`
     }
 
     const prompt = `You are evaluating Hopcharge's ad creative pipeline. Hopcharge is India's on-demand EV charging service; their ads target urban Delhi-NCR EV owners.

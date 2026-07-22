@@ -53,6 +53,7 @@ export async function syncPerformance(): Promise<void> {
           cpm: snapshot.cpm,
           ctr: snapshot.ctr,
           frequency: snapshot.frequency,
+          commentsCount: snapshot.commentsCount,
           rawData: snapshot.rawData ?? undefined,
         },
       })

@@ -110,15 +110,25 @@ model PerformanceSnapshot {
   postId       String
   post         Post     @relation(fields: [postId], references: [id])
   snapshotDate DateTime @db.Date
+  // Meta: ad impressions. YouTube: view count (see youtube/analytics.ts) - the page
+  // must relabel this per platform rather than presenting a YouTube view as an
+  // "impression".
   impressions  Int      @default(0)
-  reach        Int      @default(0)
+  reach        Int?     // unique viewers - Meta only, the Data API has no equivalent
+  // Meta: link/CTA clicks. YouTube: like count (closest organic engagement analogue).
   clicks       Int      @default(0)
-  spend        Decimal  @db.Decimal(10, 2)
+  // Paid-ad economics - null for organic YouTube snapshots, there is no spend/CPL/
+  // CPM/frequency on an organic video.
+  spend        Decimal? @db.Decimal(10, 2)
   cpl          Decimal? @db.Decimal(10, 2)
   leads        Int      @default(0)
-  cpm          Decimal  @db.Decimal(10, 4)
-  ctr          Decimal  @db.Decimal(10, 6)
-  frequency    Decimal  @db.Decimal(10, 4)
+  cpm          Decimal? @db.Decimal(10, 4)
+  // Meta: click-through rate. YouTube: engagement rate (likes / views) - same field,
+  // different meaning per platform; the page must label it accordingly.
+  ctr          Decimal? @db.Decimal(10, 6)
+  frequency    Decimal? @db.Decimal(10, 4)
+  // YouTube-only real engagement count, previously discarded into rawData.
+  commentsCount Int?
   rawData      Json?
 
   @@index([postId])
@@ -246,37 +256,52 @@ model AutomationConfig {
 model HistoricalAd {
   id           String   @id @default(uuid())
   importedAt   DateTime @default(now())
+  // A Meta ad ID or a YouTube video ID depending on `platform` - the column name is
+  // historic (Meta-only originally) but it's a generic unique external ID now.
   metaAdId     String   @unique
+  platform     String   @default("meta") // "meta" | "youtube"
   adName       String
   campaignName String?
   adSetName    String?
   bodyText     String
   headlineText String?
-  cpl          Float
+  // Paid-ad economics - meaningful for Meta only. Null for organic YouTube rows:
+  // there is no spend or cost-per-lead on an organic video.
+  cpl          Float?
   leads        Int      @default(0)
-  spend        Float
+  spend        Float?
   impressions  Int?
   reach        Int?
   clicks       Int?
   cpm          Float?
   ctr          Float?
   frequency    Float?
-  isSuccessful     Boolean
+  // Whether this ad beat the CPL success threshold - Meta only, null for YouTube
+  // (there is no equivalent cost-based success bar for an organic video).
+  isSuccessful     Boolean?
+  // Organic YouTube engagement - null for Meta rows.
+  views            Int?
+  likesCount       Int?
+  commentsCount    Int?
   concepts         Json?
   dateFrom         DateTime
   dateTo           DateTime
   source           String   @default("import")
-  hourlyBreakdown  Json?    // [{hour:0-23, impressions, spend, leads, cpl}]
-  weekdayBreakdown Json?    // [{day:0-6 Sun=0, impressions, spend, leads, cpl}]
+  hourlyBreakdown  Json?    // [{hour:0-23, impressions, spend, leads, cpl}] - Meta only
+  weekdayBreakdown Json?    // [{day:0-6 Sun=0, impressions, spend, leads, cpl}] - Meta only
 
-  // The ad's actual creative pulled from the Meta ad account (importHistoricalCreativeImages).
-  // For image ads this is the full still; for video ads it's the video thumbnail.
+  // The ad's actual creative. For Meta this is the full image, or the real video file
+  // when the ad account exposes a source URL (importHistoricalCreativeImages). For
+  // YouTube this is the thumbnail - the Data API has no video-file download endpoint,
+  // so externalWatchUrl links out to the real video on youtube.com instead.
   creativeType      String?  // "image" | "video"
-  creativeSourceUrl String?  // Meta CDN URL the still was fetched from (signed, expires)
-  creativeImagePath String?  // storage-relative path to the downloaded still
+  creativeSourceUrl String?  // CDN URL the still/video was fetched from (signed, expires)
+  creativeImagePath String?  // storage-relative path to the downloaded still/video file
+  externalWatchUrl  String?  // youtube.com/watch?v=... - YouTube only, for real playback
 
   @@index([isSuccessful])
   @@index([cpl])
+  @@index([platform])
 }
 
 // User-editable Google Trends keyword taxonomy. Seeded once from the hardcoded
