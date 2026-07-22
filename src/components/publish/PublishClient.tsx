@@ -23,19 +23,40 @@ type PostWithCreative = Post & { creative: CreativeWithIdea }
 type ImportedAd = {
   id: string
   metaAdId: string
+  platform: string
   adName: string
   campaignName: string | null
-  cpl: number
+  // Meta (paid): cpl/leads/isSuccessful are real. YouTube (organic): all null - use
+  // views/likesCount/commentsCount instead.
+  cpl: number | null
   leads: number
-  isSuccessful: boolean
+  isSuccessful: boolean | null
   creativeImagePath: string | null
   creativeType: string | null
+  views: number | null
+  likesCount: number | null
+  commentsCount: number | null
+  externalWatchUrl: string | null
 }
 
 interface PublishClientProps {
   approvedCreatives: CreativeWithIdea[]
   initialPosts: PostWithCreative[]
   initialImportedAds: ImportedAd[]
+  metaAdAccountId: string | null
+}
+
+// A URL that actually opens the post on its platform. YouTube always has a public
+// watch URL. Meta has no equivalent shareable "view ad" link, so this deep-links
+// into Ads Manager for that specific ad id instead (requires the viewer to have
+// access to the ad account) - null if we don't know the account id.
+function platformUrl(platform: string, externalPostId: string | null, metaAdAccountId: string | null): string | null {
+  if (!externalPostId) return null
+  if (platform === 'youtube') return `https://www.youtube.com/watch?v=${externalPostId}`
+  if (platform === 'meta' && metaAdAccountId) {
+    return `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${metaAdAccountId}&selected_ad_ids=${externalPostId}`
+  }
+  return null
 }
 
 const POST_STATUS_COLORS: Record<string, string> = {
@@ -134,7 +155,7 @@ function MediaThumb({ creative, size = 'sm' }: { creative: CreativeWithIdea; siz
   return creative.mediaType === 'image' ? <ImageIcon size={size === 'lg' ? 28 : 20} /> : <VideoIcon size={size === 'lg' ? 28 : 20} />
 }
 
-export function PublishClient({ approvedCreatives: initialApprovedCreatives, initialPosts, initialImportedAds }: PublishClientProps) {
+export function PublishClient({ approvedCreatives: initialApprovedCreatives, initialPosts, initialImportedAds, metaAdAccountId }: PublishClientProps) {
   const [approvedCreatives, setApprovedCreatives] = useState<CreativeWithIdea[]>(initialApprovedCreatives)
   const [posts, setPosts] = useState<PostWithCreative[]>(initialPosts)
   const [confirmCreative, setConfirmCreative] = useState<CreativeWithIdea | null>(null)
@@ -154,7 +175,9 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [resumingPostId, setResumingPostId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [pubError, setPubError] = useState<{ title: string; message: string; actions?: string[] } | null>(null)
-  const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube'>('all')
+  const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithCreative | null>(null)
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null)
+  const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube' | 'draft'>('all')
   const [reconciling, setReconciling] = useState(false)
   const [scheduleRec, setScheduleRec] = useState<string | null>(null)
   const [recommending, setRecommending] = useState(false)
@@ -182,7 +205,15 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     }
   }, [confirmCreative])
 
-  const visiblePosts = postFilter === 'all' ? posts : posts.filter((p) => p.platform === postFilter)
+  // A "draft" post went up privately (Meta PAUSED / YouTube private) and has never
+  // been promoted - distinct from a post that was live and then paused from here.
+  const isDraftPost = (post: (typeof posts)[number]) =>
+    post.status === 'posted' && (post.platformMetadata as { draft?: boolean } | null)?.draft === true
+
+  const visiblePosts =
+    postFilter === 'all' ? posts
+    : postFilter === 'draft' ? posts.filter(isDraftPost)
+    : posts.filter((p) => p.platform === postFilter)
 
   const closePreview = useCallback(() => {
     setPreviewClosing(true)
@@ -294,9 +325,21 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     }
   }, [])
 
+  // Deletes the post AND, if still live, the ad/video on its platform (see the
+  // DELETE route) - not just an unpublish. Confirmed via the delete modal below.
   const handleDeletePost = useCallback(async (postId: string) => {
-    await fetch(`/api/posts/${postId}`, { method: 'DELETE' })
-    setPosts(prev => prev.filter(p => p.id !== postId))
+    setDeletingPostId(postId)
+    try {
+      const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setPubError(await publishErrorBanner(res))
+        return
+      }
+      setPosts(prev => prev.filter(p => p.id !== postId))
+      setDeleteConfirmPost(null)
+    } finally {
+      setDeletingPostId(null)
+    }
   }, [])
 
   // Pause / unpublish a live post on its platform (Meta -> PAUSED, YouTube -> private).
@@ -413,7 +456,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
             {reconciling ? 'Refreshing…' : 'Refresh status'}
           </button>
           <div className="flex rounded-lg border border-brand-border overflow-hidden text-sm">
-            {([['all', 'All'], ['meta', 'Meta'], ['youtube', 'YouTube']] as const).map(([p, label]) => (
+            {([['all', 'All'], ['meta', 'Meta'], ['youtube', 'YouTube'], ['draft', 'Drafts']] as const).map(([p, label]) => (
               <button
                 key={p}
                 onClick={() => setPostFilter(p)}
@@ -484,10 +527,34 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                         {post.externalPostId}
                       </span>
                     )}
+                    {(() => {
+                      const url = platformUrl(post.platform, post.externalPostId, metaAdAccountId)
+                      return url && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={`text-xs font-medium whitespace-nowrap ${post.platform === 'youtube' ? 'text-red-600 hover:text-red-700' : 'text-[#1877f2] hover:text-[#1461c9]'}`}
+                        >
+                          {post.platform === 'youtube' ? 'Watch on YouTube ↗' : 'View in Ads Manager ↗'}
+                        </a>
+                      )
+                    })()}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {post.status === 'posted' && !(post.platformMetadata as { paused?: boolean } | null)?.paused && (
+                  {isDraftPost(post) && (
+                    <button
+                      onClick={() => handleResumePost(post.id)}
+                      disabled={resumingPostId === post.id}
+                      className="text-sm bg-brand-accent hover:bg-brand-accent/90 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      title={post.platform === 'youtube' ? 'Make the video public' : 'Activate the ad on Meta (starts delivery)'}
+                    >
+                      {resumingPostId === post.id ? 'Publishing...' : 'Publish live'}
+                    </button>
+                  )}
+                  {post.status === 'posted' && !isDraftPost(post) && !(post.platformMetadata as { paused?: boolean } | null)?.paused && (
                     <button
                       onClick={() => handlePausePost(post.id)}
                       disabled={pausingPostId === post.id}
@@ -497,7 +564,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                       {pausingPostId === post.id ? 'Pausing...' : post.platform === 'youtube' ? 'Unpublish' : 'Pause'}
                     </button>
                   )}
-                  {post.status === 'posted' && (post.platformMetadata as { paused?: boolean } | null)?.paused && (
+                  {post.status === 'posted' && !isDraftPost(post) && (post.platformMetadata as { paused?: boolean } | null)?.paused && (
                     <button
                       onClick={() => handleResumePost(post.id)}
                       disabled={resumingPostId === post.id}
@@ -517,35 +584,24 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                     </button>
                   )}
                   {post.status === 'failed' && (
-                    <>
-                      <button
-                        onClick={() => handlePublishNow(post.id)}
-                        disabled={publishingPostId === post.id}
-                        className="text-sm bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {publishingPostId === post.id ? 'Retrying...' : 'Retry'}
-                      </button>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="text-brand-muted hover:text-red-500 p-1.5 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => handlePublishNow(post.id)}
+                      disabled={publishingPostId === post.id}
+                      className="text-sm bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {publishingPostId === post.id ? 'Retrying...' : 'Retry'}
+                    </button>
                   )}
                   {post.status === 'deleted' && (
-                    <>
-                      <span className="text-xs text-brand-muted">{post.platform === 'youtube' ? 'Deleted on YouTube' : 'Deleted on Meta'}</span>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="text-brand-muted hover:text-red-500 p-1.5 rounded-lg transition-colors"
-                        title="Remove from queue"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </>
+                    <span className="text-xs text-brand-muted">{post.platform === 'youtube' ? 'Deleted on YouTube' : 'Deleted on Meta'}</span>
                   )}
+                  <button
+                    onClick={() => setDeleteConfirmPost(post)}
+                    className="text-brand-muted hover:text-red-500 p-1.5 rounded-lg transition-colors"
+                    title={post.status === 'deleted' ? 'Remove from queue' : 'Delete'}
+                  >
+                    <TrashIcon />
+                  </button>
                 </div>
               </div>
             ))}
@@ -553,47 +609,106 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
         )}
       </section>
 
-      {(postFilter === 'all' || postFilter === 'meta') && initialImportedAds.length > 0 && (
-        <section>
-          <h2 className="text-lg font-medium text-brand-dark">Imported from Meta ({initialImportedAds.length})</h2>
-          <p className="text-sm text-brand-muted mt-0.5 mb-4">Real ads pulled from your Meta account, sorted by CPL.</p>
-          <div className="space-y-2">
-            {initialImportedAds.slice(0, 50).map((ad) => (
-              <div key={ad.id} className="bg-white border border-brand-border rounded-xl px-4 py-3 flex items-center gap-4">
-                {ad.creativeImagePath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/meta/historical/${ad.id}/image`}
-                    alt=""
-                    className="w-12 h-12 rounded-lg object-cover shrink-0 bg-brand-bg"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-brand-bg flex items-center justify-center shrink-0" title="No creative image imported yet">
-                    {ad.creativeType === 'image' ? <ImageIcon /> : <VideoIcon />}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-brand-dark truncate" title={ad.adName}>{ad.adName}</p>
-                  <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs text-brand-muted">
-                    <span>meta</span>
-                    <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">posted</span>
-                    <span>CPL {ad.cpl.toFixed(0)}</span>
-                    <span>{ad.leads} leads</span>
-                    {ad.campaignName && <span className="truncate max-w-[12rem]" title={ad.campaignName}>{ad.campaignName}</span>}
-                    <span className="font-mono truncate max-w-[10rem]" title={ad.metaAdId}>{ad.metaAdId}</span>
-                  </div>
+      {postFilter !== 'draft' && (() => {
+        const metaAds = initialImportedAds.filter(ad => ad.platform !== 'youtube')
+        const youtubeAds = initialImportedAds.filter(ad => ad.platform === 'youtube')
+        const showMeta = postFilter === 'all' || postFilter === 'meta'
+        const showYoutube = postFilter === 'all' || postFilter === 'youtube'
+        return (
+          <>
+            {showMeta && metaAds.length > 0 && (
+              <section>
+                <h2 className="text-lg font-medium text-brand-dark">Imported from Meta ({metaAds.length})</h2>
+                <p className="text-sm text-brand-muted mt-0.5 mb-4">Real ads pulled from your Meta account, sorted by CPL.</p>
+                <div className="space-y-2">
+                  {metaAds.slice(0, 50).map((ad) => (
+                    <div key={ad.id} className="bg-white border border-brand-border rounded-xl px-4 py-3 flex items-center gap-4">
+                      {ad.creativeImagePath && ad.creativeType === 'video' ? (
+                        <video src={`/api/meta/historical/${ad.id}/image`} className="w-12 h-12 rounded-lg object-cover shrink-0 bg-brand-bg" muted />
+                      ) : ad.creativeImagePath ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/meta/historical/${ad.id}/image`}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover shrink-0 bg-brand-bg"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-brand-bg flex items-center justify-center shrink-0" title="No creative imported yet">
+                          {ad.creativeType === 'image' ? <ImageIcon /> : <VideoIcon />}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-brand-dark truncate" title={ad.adName}>{ad.adName}</p>
+                        <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs text-brand-muted">
+                          <span>meta</span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">posted</span>
+                          {ad.cpl != null && <span>CPL {ad.cpl.toFixed(0)}</span>}
+                          <span>{ad.leads} leads</span>
+                          {ad.campaignName && <span className="truncate max-w-[12rem]" title={ad.campaignName}>{ad.campaignName}</span>}
+                          <span className="font-mono truncate max-w-[10rem]" title={ad.metaAdId}>{ad.metaAdId}</span>
+                        </div>
+                      </div>
+                      {ad.isSuccessful && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0">under target</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                {ad.isSuccessful && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0">under target</span>
+                {metaAds.length > 50 && (
+                  <p className="text-xs text-brand-muted mt-3">Showing the 50 lowest-CPL ads of {metaAds.length}.</p>
                 )}
-              </div>
-            ))}
-          </div>
-          {initialImportedAds.length > 50 && (
-            <p className="text-xs text-brand-muted mt-3">Showing the 50 lowest-CPL ads of {initialImportedAds.length}.</p>
-          )}
-        </section>
-      )}
+              </section>
+            )}
+
+            {showYoutube && youtubeAds.length > 0 && (
+              <section>
+                <h2 className="text-lg font-medium text-brand-dark">Imported from YouTube ({youtubeAds.length})</h2>
+                <p className="text-sm text-brand-muted mt-0.5 mb-4">Organic videos pulled from your channel, sorted by views. No spend/CPL - these aren&rsquo;t ads.</p>
+                <div className="space-y-2">
+                  {youtubeAds.slice(0, 50).map((ad) => (
+                    <div key={ad.id} className="bg-white border border-brand-border rounded-xl px-4 py-3 flex items-center gap-4">
+                      {ad.creativeImagePath ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/meta/historical/${ad.id}/image`}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover shrink-0 bg-brand-bg"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-brand-bg flex items-center justify-center shrink-0" title="No thumbnail imported yet">
+                          <VideoIcon />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-brand-dark truncate" title={ad.adName}>{ad.adName}</p>
+                        <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs text-brand-muted">
+                          <span>youtube</span>
+                          <span>{(ad.views ?? 0).toLocaleString()} views</span>
+                          <span>{(ad.likesCount ?? 0).toLocaleString()} likes</span>
+                          <span>{(ad.commentsCount ?? 0).toLocaleString()} comments</span>
+                        </div>
+                      </div>
+                      {ad.externalWatchUrl && (
+                        <a
+                          href={ad.externalWatchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-red-600 hover:text-red-700 font-medium shrink-0"
+                        >
+                          Watch ↗
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {youtubeAds.length > 50 && (
+                  <p className="text-xs text-brand-muted mt-3">Showing the 50 most-viewed videos of {youtubeAds.length}.</p>
+                )}
+              </section>
+            )}
+          </>
+        )
+      })()}
 
       {/* Preview modal */}
       {previewCreative && (
@@ -788,6 +903,46 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
                 className="flex-1 bg-brand hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition-all duration-200"
               >
                 {modalPosting ? 'Posting...' : scheduledAt ? 'Schedule' : 'Post now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmPost && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overlay-backdrop animate-fade-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirmPost(null) }}
+        >
+          <div className="bg-white border border-brand-border rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl animate-modal-in">
+            <div className="flex items-start justify-between">
+              <h3 className="font-semibold text-brand-dark">Delete this ad?</h3>
+              <button onClick={() => setDeleteConfirmPost(null)} className="text-brand-muted hover:text-brand-dark transition-colors mt-0.5">
+                <CloseIcon />
+              </button>
+            </div>
+            <p className="text-sm text-brand-muted">
+              &ldquo;{deleteConfirmPost.creative.idea.title}&rdquo; will be permanently removed from the queue.
+              {deleteConfirmPost.externalPostId && deleteConfirmPost.status !== 'deleted' && (
+                <>
+                  {' '}It is currently live on <span className="font-medium text-brand-dark">{deleteConfirmPost.platform === 'youtube' ? 'YouTube' : 'Meta'}</span> -
+                  this also deletes it there (the {deleteConfirmPost.platform === 'youtube' ? 'video' : 'ad'} itself, not just a pause). This cannot be undone.
+                </>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmPost(null)}
+                className="flex-1 border border-brand-border text-brand-muted py-2 rounded-lg text-sm hover:border-brand-divider hover:bg-brand-bg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeletePost(deleteConfirmPost.id)}
+                disabled={deletingPostId === deleteConfirmPost.id}
+                className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {deletingPostId === deleteConfirmPost.id ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
