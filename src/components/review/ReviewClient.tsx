@@ -448,8 +448,22 @@ function CreativeCard({
     >
       <div className="aspect-[9/16] bg-brand-bg flex items-center justify-center relative overflow-hidden">
         {hasMedia ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/api/creatives/${creative.id}/download`} alt={creative.idea.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" />
+          creative.mediaType === 'video' ? (
+            // A video file can't go in an <img> - it fails silently and the browser
+            // falls back to rendering the alt text (the idea title) as oversized
+            // fallback text on top of the badges. preload="metadata" is enough for
+            // the browser to show the first frame as a static thumbnail.
+            <video
+              src={`/api/creatives/${creative.id}/download`}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+              muted
+              playsInline
+              preload="metadata"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/creatives/${creative.id}/download`} alt={creative.idea.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" />
+          )
         ) : creative.mediaType === 'image' ? <ImageIcon /> : <VideoIcon />}
 
         {/* status overlay (top-left) */}
