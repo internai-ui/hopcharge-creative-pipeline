@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/db'
 import { storage } from '@/lib/storage'
+import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
+import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
+import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
+import { overlayHeadlineOnVideo, videoHeadlineOverlayEnabled } from '@/lib/video-headline-overlay'
 import { NextRequest } from 'next/server'
 
 // The uploaded File's name is unreliable - canvas/blob exports are often nameless
@@ -18,7 +22,7 @@ const ALLOWED_EXTS = new Set(Object.values(MIME_TO_EXT))
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const creative = await prisma.creative.findUnique({ where: { id } })
+    const creative = await prisma.creative.findUnique({ where: { id }, include: { idea: true } })
     if (!creative) return Response.json({ error: 'Creative not found' }, { status: 404 })
 
     const formData = await req.formData()
@@ -47,11 +51,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const buffer = Buffer.from(await file.arrayBuffer())
 
     // Manual-generation first upload: the creative has no media yet (it was parked in
-    // `awaiting_upload` with only a prompt). This upload IS the original asset, so store
-    // it as the original and advance it into the normal review flow - it is not an edit.
+    // `awaiting_upload` with only a prompt). This is the raw external-tool output, so
+    // it hasn't been through the branding pass the automatic pipeline applies right
+    // after generation (logo-overlay.ts / headline-overlay.ts) - apply both here,
+    // same as generate-image/route.ts and poll-creative-status.ts do for API-generated
+    // creatives, so a manually-uploaded ad isn't the only one that ships unbranded.
     if (creative.status === 'awaiting_upload') {
+      const headline = creative.idea.headline
+      let finalBuffer: Buffer = Buffer.from(buffer)
+      if (uploadedKind === 'image') {
+        if (logoOverlayEnabled()) finalBuffer = await overlayLogo(finalBuffer)
+        if (headlineOverlayEnabled()) finalBuffer = await overlayHeadline(finalBuffer, headline)
+      } else {
+        if (videoLogoOverlayEnabled()) finalBuffer = await overlayLogoOnVideo(finalBuffer)
+        if (videoHeadlineOverlayEnabled()) finalBuffer = await overlayHeadlineOnVideo(finalBuffer, headline)
+      }
+
       const originalPath = `creatives/${id}/original.${ext}`
-      await storage.save(originalPath, buffer)
+      await storage.save(originalPath, finalBuffer)
       if (creative.originalFilePath && creative.originalFilePath !== originalPath) {
         await storage.delete(creative.originalFilePath).catch(() => {})
       }

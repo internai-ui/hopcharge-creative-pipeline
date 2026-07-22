@@ -4,12 +4,15 @@ import { getVideoGenerator, getImageGenerator } from '@/lib/plugins/registry'
 import { downloadImageBuffer } from '@/lib/download'
 import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
 import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
+import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
+import { overlayHeadlineOnVideo, videoHeadlineOverlayEnabled } from '@/lib/video-headline-overlay'
 
 const THIRTY_MINUTES = 30 * 60 * 1000
 
 export async function pollCreativeStatus(): Promise<void> {
   const generating = await prisma.creative.findMany({
     where: { status: 'generating', generatorJobId: { not: null } },
+    include: { idea: true },
   })
 
   const videoGenerator = getVideoGenerator()
@@ -27,7 +30,9 @@ export async function pollCreativeStatus(): Promise<void> {
         if (result.status === 'complete' && result.fileUrls?.[0]) {
           const { buffer, ext } = await downloadImageBuffer(result.fileUrls[0])
           // The van is rendered unbranded; stamp the real Hopcharge logo here for a consistent mark.
-          const finalBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
+          const logoBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
+          // Composite the headline band so the ad carries its own on-image message.
+          const finalBuffer = headlineOverlayEnabled() ? await overlayHeadline(logoBuffer, creative.idea.headline) : logoBuffer
           const filePath = `creatives/${creative.id}/original.${ext}`
           await storage.save(filePath, finalBuffer)
           await prisma.creative.update({
@@ -56,7 +61,9 @@ export async function pollCreativeStatus(): Promise<void> {
         const response = await fetch(result.fileUrl)
         const buffer = Buffer.from(await response.arrayBuffer())
         // The van is rendered unbranded; burn the real Hopcharge logo onto the frames.
-        const finalBuffer = videoLogoOverlayEnabled() ? await overlayLogoOnVideo(buffer) : buffer
+        const logoBuffer = videoLogoOverlayEnabled() ? await overlayLogoOnVideo(buffer) : buffer
+        // Composite the headline band onto every frame so the ad carries its own message.
+        const finalBuffer = videoHeadlineOverlayEnabled() ? await overlayHeadlineOnVideo(logoBuffer, creative.idea.headline) : logoBuffer
         const filePath = `creatives/${creative.id}/original.mp4`
         await storage.save(filePath, finalBuffer)
 

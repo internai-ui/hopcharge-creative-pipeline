@@ -2,12 +2,16 @@ import { prisma } from '@/lib/db'
 import { storage } from '@/lib/storage'
 import { getVideoGenerator, getImageGenerator } from '@/lib/plugins/registry'
 import { downloadImageBuffer } from '@/lib/download'
+import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
+import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
+import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
+import { overlayHeadlineOnVideo, videoHeadlineOverlayEnabled } from '@/lib/video-headline-overlay'
 import { NextRequest } from 'next/server'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const creative = await prisma.creative.findUnique({ where: { id } })
+    const creative = await prisma.creative.findUnique({ where: { id }, include: { idea: true } })
     if (!creative) return Response.json({ error: 'Creative not found' }, { status: 404 })
 
     if (creative.status !== 'generating' || !creative.generatorJobId) {
@@ -23,8 +27,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       const result = await imageGen.pollJobStatus(creative.generatorJobId)
       if (result.status === 'complete' && result.fileUrls?.[0]) {
         const { buffer, ext } = await downloadImageBuffer(result.fileUrls[0])
+        // The van is rendered unbranded; stamp the real Hopcharge logo here for a consistent mark.
+        const logoBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
+        // Composite the headline band so the ad carries its own on-image message.
+        const finalBuffer = headlineOverlayEnabled() ? await overlayHeadline(logoBuffer, creative.idea.headline) : logoBuffer
         const filePath = `creatives/${creative.id}/original.${ext}`
-        await storage.save(filePath, buffer)
+        await storage.save(filePath, finalBuffer)
         const updated = await prisma.creative.update({
           where: { id },
           data: { status: 'ready_for_review', originalFilePath: filePath },
@@ -58,8 +66,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     let originalFilePath = creative.originalFilePath
     if (result.status === 'complete' && result.fileUrl && !originalFilePath) {
       const buffer = Buffer.from(await (await fetch(result.fileUrl)).arrayBuffer())
+      // The van is rendered unbranded; burn the real Hopcharge logo onto the frames.
+      const logoBuffer = videoLogoOverlayEnabled() ? await overlayLogoOnVideo(buffer) : buffer
+      // Composite the headline band onto every frame so the ad carries its own message.
+      const finalBuffer = videoHeadlineOverlayEnabled() ? await overlayHeadlineOnVideo(logoBuffer, creative.idea.headline) : logoBuffer
       originalFilePath = `creatives/${creative.id}/original.mp4`
-      await storage.save(originalFilePath, buffer)
+      await storage.save(originalFilePath, finalBuffer)
     }
 
     // Landscape (16:9) job for YouTube "both" - best-effort. A failure just ships the
