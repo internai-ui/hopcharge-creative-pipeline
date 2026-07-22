@@ -4,6 +4,18 @@ import { useState, useCallback, useEffect } from 'react'
 import type { Creative, Idea, Post } from '@prisma/client'
 import { CloseIcon } from '@/components/ui/icons'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { explainError } from '@/lib/error-guidance'
+
+// Pull a { title, message, actions } banner out of a failed publish/retry response,
+// so every failure shows a reason + concrete next steps (falls back to explainError).
+async function publishErrorBanner(res: Response): Promise<{ title: string; message: string; actions?: string[] }> {
+  const d = await res.json().catch(() => ({} as Record<string, unknown>))
+  const g = d.reason
+    ? { reason: String(d.reason), actions: (d.actions as string[]) ?? [] }
+    : explainError(String(d.details ?? d.error ?? ''))
+  return { title: String(d.error ?? 'Publish failed'), message: g.reason, actions: g.actions }
+}
 
 type CreativeWithIdea = Creative & { idea: Idea }
 type PostWithCreative = Post & { creative: CreativeWithIdea }
@@ -141,6 +153,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   const [pausingPostId, setPausingPostId] = useState<string | null>(null)
   const [resumingPostId, setResumingPostId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [pubError, setPubError] = useState<{ title: string; message: string; actions?: string[] } | null>(null)
   const [postFilter, setPostFilter] = useState<'all' | 'meta' | 'youtube'>('all')
   const [reconciling, setReconciling] = useState(false)
   const [scheduleRec, setScheduleRec] = useState<string | null>(null)
@@ -186,6 +199,7 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
     const creative = confirmCreative
     setModalPosting(true)
     setError('')
+    setPubError(null)
 
     try {
       // Delete any existing failed posts for this creative before retrying
@@ -230,7 +244,10 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ draft }),
           })
-          if (!publishRes.ok) allSucceeded = false
+          if (!publishRes.ok) {
+            allSucceeded = false
+            setPubError(await publishErrorBanner(publishRes))
+          }
         }
       }
 
@@ -266,8 +283,10 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
 
   const handlePublishNow = useCallback(async (postId: string) => {
     setPublishingPostId(postId)
+    setPubError(null)
     try {
-      await fetch(`/api/posts/${postId}/publish`, { method: 'POST' })
+      const res = await fetch(`/api/posts/${postId}/publish`, { method: 'POST' })
+      if (!res.ok) setPubError(await publishErrorBanner(res))
       const allPosts = await fetch('/api/posts').then((r) => r.json())
       setPosts(allPosts)
     } finally {
@@ -319,6 +338,15 @@ export function PublishClient({ approvedCreatives: initialApprovedCreatives, ini
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8 animate-page">
       <h1 className="text-2xl font-semibold text-brand-dark">Publish Queue</h1>
+
+      {pubError && (
+        <ErrorBanner
+          title={pubError.title}
+          message={pubError.message}
+          actions={pubError.actions}
+          onDismiss={() => setPubError(null)}
+        />
+      )}
 
       <section>
         <h2 className="text-lg font-medium text-brand-dark mb-4">

@@ -25,6 +25,7 @@ import { GenerateDrawer } from './GenerateDrawer'
 import { AddIdeaDrawer } from './AddIdeaDrawer'
 import { TrendContextPanel } from './TrendContextPanel'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { explainError } from '@/lib/error-guidance'
 
 // A generate response points at manual (copy-paste) mode when the created creative is
 // parked in `awaiting_upload` (generate-image returns an array, generate a single object).
@@ -500,6 +501,7 @@ export function IdeasClient({ initialIdeas, latestTrend, manualDefault }: Props)
         <ErrorBanner
           title={`${generationErrorType === 'image' ? 'Image' : 'Video'} generation failed`}
           message={generationError}
+          actions={explainError(generationError).actions}
           onDismiss={() => setGenerationError(null)}
         />
       )}

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getPublisher } from '@/lib/plugins/registry'
 import { logPipelineIssue } from '@/lib/pipeline-issues'
+import { explainError } from '@/lib/error-guidance'
 import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,6 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // platform's *_DRAFT_MODE env default.
   const body = await req.json().catch(() => ({}))
   const draft = typeof body?.draft === 'boolean' ? body.draft : undefined
+  let platform: string | undefined
   try {
     const post = await prisma.post.findUnique({
       where: { id },
@@ -16,15 +18,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
     if (!post) return Response.json({ error: 'Post not found' }, { status: 404 })
     if (post.status === 'posted') return Response.json({ error: 'Post already published' }, { status: 400 })
+    platform = post.platform
 
     // YouTube accepts video only. Catch an image creative here so the user gets a clear
-    // message (not a 500) - these are dead-ends: delete the post and generate a video
-    // for YouTube, or publish the image to Meta instead.
+    // message + next steps (not a 500) - these are dead-ends: delete the post and
+    // generate a video for YouTube, or publish the image to Meta instead.
     if (post.platform === 'youtube' && post.creative.mediaType !== 'video') {
-      return Response.json(
-        { error: 'This is an image creative and YouTube accepts video only. Delete this post and generate a video for YouTube (or publish the image to Meta).' },
-        { status: 400 },
-      )
+      const g = explainError('image creative youtube video creatives only', { platform })
+      return Response.json({ error: 'Cannot publish to YouTube', reason: g.reason, actions: g.actions }, { status: 400 })
     }
 
     const publisher = getPublisher(post.platform)
@@ -78,6 +79,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description: `Post ${id} failed to publish: ${String(err).slice(0, 300)}`,
       relatedEntityId: id,
     })
-    return Response.json({ error: 'Failed to publish post', details: String(err) }, { status: 500 })
+    const g = explainError(String(err), { platform })
+    return Response.json(
+      { error: 'Failed to publish post', reason: g.reason, actions: g.actions, details: String(err) },
+      { status: 500 },
+    )
   }
 }
