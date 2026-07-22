@@ -355,6 +355,19 @@ export class MetaPublisher implements PublisherPlugin {
     })
   }
 
+  // Permanently deletes the ad object (distinct from pause, which just stops
+  // delivery). A 404 means it's already gone upstream - treat that as success so a
+  // retry after a partial failure (e.g. DB write failed after this succeeded) works.
+  async delete(externalPostId: string): Promise<void> {
+    const res = await fetch(`${BASE}/${externalPostId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${this.token}` },
+    })
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`Meta ad delete failed: ${res.status} ${await res.text()}`)
+    }
+  }
+
   async scale(externalPostId: string, budgetMultiplier: number): Promise<void> {
     // Budget lives on the ad set, not the ad - look up adset_id first
     const adRes = await fetch(

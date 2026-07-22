@@ -3,9 +3,12 @@ import { getPublisher } from '@/lib/plugins/registry'
 import { logPipelineIssue } from '@/lib/pipeline-issues'
 import { NextRequest } from 'next/server'
 
-// Reverse of the pause route: re-activate a paused post on its platform. Meta -> the
-// ad is set ACTIVE (resumes delivery); YouTube -> the video is flipped back to public.
-// Clears the local paused flag so the Publish queue drops the "Paused" badge.
+// Reverse of the pause route: re-activate a post on its platform. Meta -> the ad is
+// set ACTIVE (resumes delivery); YouTube -> the video is flipped back to public. Same
+// call whether the post was previously paused OR is still a draft that never went
+// live (a draft ad is already PAUSED / private, so "resume" IS "promote to
+// production" for it) - clears both the paused and draft flags so the Publish queue
+// drops whichever badge applied.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
@@ -20,7 +23,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const existingMeta = (post.platformMetadata as Record<string, unknown> | null) ?? {}
     const updated = await prisma.post.update({
       where: { id },
-      data: { platformMetadata: { ...existingMeta, paused: false } },
+      data: { platformMetadata: { ...existingMeta, paused: false, draft: false } },
     })
 
     await prisma.agentAction.create({

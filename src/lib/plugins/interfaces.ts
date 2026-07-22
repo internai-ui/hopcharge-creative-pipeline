@@ -11,16 +11,25 @@ export interface AdConcepts {
 }
 
 export interface PerformanceContext {
+  // Ranked within their own platform, never against each other - Meta on CPL
+  // (lower is better), YouTube on engagement rate (higher is better, see
+  // youtube-metrics.ts). Mixing the two onto one scale is exactly the bug this
+  // shape avoids: a YouTube post has no CPL, so ranking everything by CPL used to
+  // silently sort every YouTube post in as a "poor performer" by default.
   topPerformers: Array<{
     idea: Idea
-    cpl: number
+    platform: 'meta' | 'youtube'
+    metric: 'cpl' | 'engagementRate'
+    metricValue: number // ₹ for cpl, % for engagementRate
     ctr: number
     fatigueRate: 'slow' | 'fast' | 'none'
     patterns: string[]
   }>
   poorPerformers: Array<{
     idea: Idea
-    cpl: number
+    platform: 'meta' | 'youtube'
+    metric: 'cpl' | 'engagementRate'
+    metricValue: number
     failureHypothesis: string
   }>
   fastFatiguers: Array<{
@@ -144,6 +153,12 @@ export interface PublisherPlugin {
   // Reverse of pause(): Meta sets the ad ACTIVE, YouTube flips the video back to public.
   resume(externalPostId: string): Promise<void>
   scale(externalPostId: string, budgetMultiplier: number): Promise<void>
+  // Permanently remove the post from the platform (Meta: DELETE the ad object,
+  // YouTube: videos.delete) - distinct from pause(), which just stops delivery/
+  // hides it while leaving the object in place. Must be idempotent-ish: treat
+  // "already gone" (404 / not-found) as success so a retry after a partial
+  // failure doesn't get stuck.
+  delete(externalPostId: string): Promise<void>
 }
 
 export interface AnalyticsPlugin {

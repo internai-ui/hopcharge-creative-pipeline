@@ -20,14 +20,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (post.status === 'posted') return Response.json({ error: 'Post already published' }, { status: 400 })
     platform = post.platform
 
-    // YouTube accepts video only. Catch an image creative here so the user gets a clear
-    // message + next steps (not a 500) - these are dead-ends: delete the post and
-    // generate a video for YouTube, or publish the image to Meta instead.
-    if (post.platform === 'youtube' && post.creative.mediaType !== 'video') {
-      const g = explainError('image creative youtube video creatives only', { platform })
-      return Response.json({ error: 'Cannot publish to YouTube', reason: g.reason, actions: g.actions }, { status: 400 })
-    }
-
     const publisher = getPublisher(post.platform)
     const adSchedule = post.adSchedule as { days: number[]; startHour: number; endHour: number } | null
     const idea = post.creative.idea

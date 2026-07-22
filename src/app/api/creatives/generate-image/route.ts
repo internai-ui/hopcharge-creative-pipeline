@@ -3,6 +3,7 @@ import { getImageGenerator } from '@/lib/plugins/registry'
 import { storage } from '@/lib/storage'
 import { buildImagePrompt } from '@/lib/plugins/prompt-constants'
 import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
+import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
 import { NextRequest } from 'next/server'
 
 async function readImageBuffer(fileUrl: string): Promise<{ buffer: Buffer; ext: string }> {
@@ -18,15 +19,9 @@ export async function POST(req: NextRequest) {
   try {
     const { ideaId, regenerate, platform, manual } = await req.json()
     const targetPlatform: 'meta' | 'youtube' = platform === 'youtube' ? 'youtube' : 'meta'
-    // YouTube publishes video only (videos.insert can't take a still), so an image
-    // creative can never be posted there. Reject it up front instead of letting a
-    // dead-end creative be created and then fail at publish time.
-    if (targetPlatform === 'youtube') {
-      return Response.json(
-        { error: 'YouTube publishes video only - generate a video for YouTube. Images can only be published to Meta.' },
-        { status: 400 },
-      )
-    }
+    // YouTube's videos.insert can't take a still, so an image creative headed there is
+    // converted to a fixed-duration video at publish time (see still-to-video.ts) -
+    // nothing special needed here beyond stamping the right platform.
     // The Ideas-page toggle sends an explicit boolean that overrides the env default.
     const useManual = typeof manual === 'boolean' ? manual : process.env.IMAGE_GENERATOR === 'manual'
 
@@ -121,7 +116,9 @@ export async function POST(req: NextRequest) {
     for (const url of allUrls) {
       const { buffer, ext } = await readImageBuffer(url)
       // The van is rendered unbranded; stamp the real Hopcharge logo here for a consistent mark.
-      const finalBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
+      const logoBuffer = logoOverlayEnabled() ? await overlayLogo(buffer) : buffer
+      // Composite the headline band so the ad carries its own on-image message.
+      const finalBuffer = headlineOverlayEnabled() ? await overlayHeadline(logoBuffer, idea.headline) : logoBuffer
 
       const creative = await prisma.creative.create({
         data: {

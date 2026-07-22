@@ -12,18 +12,6 @@ export function explainError(raw: string, ctx: { platform?: string } = {}): Erro
   const msg = (raw || '').toLowerCase()
   const { platform } = ctx
 
-  // YouTube: an image creative can't be posted (video-only).
-  if (msg.includes('video creatives only') || (msg.includes('image') && msg.includes('youtube'))) {
-    return {
-      reason: 'This is an image creative, and YouTube only accepts video.',
-      actions: [
-        'On the Ideas page, use "Generate video" for this idea and choose YouTube.',
-        'Or publish this image to Meta instead - images belong on Meta.',
-        'Delete this failed post from the queue once you have a video version.',
-      ],
-    }
-  }
-
   // YouTube: the connected account has no channel.
   if (msg.includes('youtubesignuprequired') || (msg.includes('channel') && msg.includes('no '))) {
     return {

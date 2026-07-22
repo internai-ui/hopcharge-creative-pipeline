@@ -1,6 +1,7 @@
 import type { PublisherPlugin } from '../interfaces'
 import type { Creative } from '@prisma/client'
 import { storage } from '@/lib/storage'
+import { stillToVideo } from '@/lib/still-to-video'
 import { DATA_API, youtubeAccessToken } from './client'
 
 // ── YouTube publisher (YouTube Data API v3 - organic Shorts / videos) ─────────
@@ -17,7 +18,9 @@ import { DATA_API, youtubeAccessToken } from './client'
 // "Draft" maps to privacyStatus = private (only the channel owner can see it -
 // nothing is public until it is flipped), "production" maps to public. pause()
 // flips a live video back to private. There is no budget, so scale() is a no-op.
-// YouTube hosts video only, so image creatives are rejected.
+// YouTube hosts video only - an image creative is converted to a video on the way
+// out (see still-to-video.ts) rather than rejected; nothing is stored back to the
+// creative, the conversion is a one-off encode done for this upload only.
 //
 // Requires (see .env.example): GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET (a Google
 // OAuth client with the YouTube Data API v3 enabled) and YOUTUBE_REFRESH_TOKEN
@@ -65,15 +68,18 @@ export class YouTubePublisher implements PublisherPlugin {
     ytCallToAction?: string
     draft?: boolean
   }): Promise<{ externalPostId: string; isDraft: boolean }> {
-    if (creative.mediaType !== 'video') {
-      throw new Error('YouTube publishing supports video creatives only (images cannot be posted to YouTube)')
+    if (creative.mediaType !== 'video' && creative.mediaType !== 'image') {
+      throw new Error(`YouTube publishing supports video or image creatives only (got ${creative.mediaType})`)
     }
     const filePath = creative.editedFilePath ?? creative.originalFilePath
     if (!filePath) throw new Error('Creative has no file path')
 
     const isDraft = draft ?? this.draftMode
     const token = await youtubeAccessToken()
-    const bytes = await storage.read(filePath)
+    const rawBytes = await storage.read(filePath)
+    // Stills are converted to a fixed-duration video for this upload only - the
+    // encode is not persisted back onto the creative.
+    const bytes = creative.mediaType === 'image' ? await stillToVideo(rawBytes) : rawBytes
 
     const { title, description, tags } = this.buildMetadata({ caption, headline, ytHeadlines, ytDescriptions, ytCallToAction })
     const videoId = await this.uploadVideo(token, bytes, {
@@ -190,5 +196,18 @@ export class YouTubePublisher implements PublisherPlugin {
   // with PublisherPlugin / MetaPublisher.
   async scale(_externalPostId: string, _budgetMultiplier: number): Promise<void> {
     return
+  }
+
+  // Permanently deletes the video (distinct from pause, which just flips it
+  // private). A 404 means it's already gone upstream - treat that as success.
+  async delete(externalPostId: string): Promise<void> {
+    const token = await youtubeAccessToken()
+    const res = await fetch(`${DATA_API}/videos?id=${externalPostId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`YouTube video delete failed: ${res.status} ${await res.text()}`)
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { youtubeConfigured, youtubeAccessToken, youtubeGet, chunk, isRealYouTubeVideoId } from '@/lib/plugins/youtube/client'
+import { syncCreativeStatusAfterPostRemoval } from '@/lib/creative-status-sync'
 
 const BASE = 'https://graph.facebook.com/v21.0'
 
@@ -41,7 +42,7 @@ async function reconcileMetaPosts(): Promise<ReconcileResult> {
 
   const posts = await prisma.post.findMany({
     where: { status: 'posted', platform: 'meta', externalPostId: { not: null } },
-    select: { id: true, externalPostId: true },
+    select: { id: true, externalPostId: true, creativeId: true },
   })
 
   let checked = 0
@@ -54,6 +55,7 @@ async function reconcileMetaPosts(): Promise<ReconcileResult> {
       const data = await res.json()
       if (looksDeleted(data)) {
         await prisma.post.update({ where: { id: post.id }, data: { status: 'deleted' } })
+        await syncCreativeStatusAfterPostRemoval(post.creativeId)
         deletedPostIds.push(post.id)
         await prisma.agentAction.create({
           data: {
@@ -86,7 +88,7 @@ async function reconcileYouTubePosts(): Promise<ReconcileResult> {
 
   const posts = await prisma.post.findMany({
     where: { status: 'posted', platform: 'youtube', externalPostId: { not: null } },
-    select: { id: true, externalPostId: true },
+    select: { id: true, externalPostId: true, creativeId: true },
   })
   const ids = posts.map((p) => p.externalPostId!).filter(isRealYouTubeVideoId)
   if (ids.length === 0) return { checked: 0, deletedPostIds }
@@ -114,6 +116,7 @@ async function reconcileYouTubePosts(): Promise<ReconcileResult> {
     checked++
     if (!existing.has(videoId)) {
       await prisma.post.update({ where: { id: post.id }, data: { status: 'deleted' } })
+      await syncCreativeStatusAfterPostRemoval(post.creativeId)
       deletedPostIds.push(post.id)
       await prisma.agentAction.create({
         data: {

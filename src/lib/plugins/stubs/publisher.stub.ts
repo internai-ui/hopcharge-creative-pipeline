@@ -32,4 +32,8 @@ export class PublisherStub implements PublisherPlugin {
   async scale(_externalPostId: string, _budgetMultiplier: number): Promise<void> {
     await new Promise((r) => setTimeout(r, 100))
   }
+
+  async delete(_externalPostId: string): Promise<void> {
+    await new Promise((r) => setTimeout(r, 100))
+  }
 }
