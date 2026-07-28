@@ -129,10 +129,18 @@ export const IMAGE_POSITIVE_GUARDRAILS =
 // the text itself (same reasoning as the logo), but the SHOT needs to leave that
 // region calm so the band reads as designed, not pasted over someone's face. Appended
 // to both image and video prompts.
-export const TEXT_SAFE_ZONE_GUARDRAIL =
-  'Compose with the top quarter of the frame visually simple and uncluttered (open sky, ' +
-  'a plain wall or building facade, negative space) - keep Sara\'s face, the van, and all ' +
-  'important action in the lower three-quarters of the frame, clear of the very top edge.'
+//
+// Only names Sara when the idea's own visual text already mentions her - many ads are
+// van/product/detail shots with no customer at all, and naming her unconditionally here
+// primes the model to render her into shots that were never meant to feature her.
+export function buildTextSafeZoneGuardrail(sourceVisual: string): string {
+  const subject = /\bSara\b/i.test(sourceVisual) ? 'Sara\'s face' : 'the main subject'
+  return (
+    'Compose with the top quarter of the frame visually simple and uncluttered (open sky, ' +
+    `a plain wall or building facade, negative space) - keep ${subject}, the van, and all ` +
+    'important action in the lower three-quarters of the frame, clear of the very top edge.'
+  )
+}
 
 // The single most common accuracy failure in generated Hopcharge visuals: the
 // charging cable trailing off toward a person's hand, an off-frame/unseen vehicle,
@@ -193,7 +201,7 @@ export function buildVideoPrompt(videoVisual: string, options: BuildVideoOptions
   return [
     videoVisual,
     `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
-    TEXT_SAFE_ZONE_GUARDRAIL,
+    buildTextSafeZoneGuardrail(videoVisual),
     CABLE_CONNECTION_GUARDRAIL,
     brief ? 'Cinematic, smooth stabilised camera, golden-hour grade, 9:16 vertical.' : VIDEO_QUALITY,
   ].join(' ')
@@ -231,7 +239,7 @@ export function buildImagePrompt(imageVisual: string, options: BuildImageOptions
     imageVisual,
     `Hopcharge van (match this exact vehicle): ${vanDesc}.`,
     IMAGE_POSITIVE_GUARDRAILS,
-    TEXT_SAFE_ZONE_GUARDRAIL,
+    buildTextSafeZoneGuardrail(imageVisual),
     CABLE_CONNECTION_GUARDRAIL,
     brief ? 'Advertising photo, 9:16 vertical, no text overlay.' : IMAGE_QUALITY,
   ].join(' ')

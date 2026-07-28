@@ -9,7 +9,7 @@
  * The band sits in the TOP ~quarter of the frame by default, not the bottom - Reels/
  * Shorts native UI (caption, username, engagement icons) already claims the bottom and
  * right edges, so a bottom band would fight the platform chrome. The image prompt
- * (see prompt-constants.ts TEXT_SAFE_ZONE_GUARDRAIL) asks the model to keep that same
+ * (see prompt-constants.ts buildTextSafeZoneGuardrail) asks the model to keep that same
  * region visually calm so the band reads as a designed part of the shot, not a sticker
  * slapped over the subject's face.
  *
