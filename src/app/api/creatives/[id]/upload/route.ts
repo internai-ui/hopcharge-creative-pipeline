@@ -4,6 +4,7 @@ import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
 import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
 import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
 import { overlayHeadlineOnVideo, videoHeadlineOverlayEnabled } from '@/lib/video-headline-overlay'
+import { appendOutroClip, outroClipEnabled } from '@/lib/video-append-clip'
 import { NextRequest } from 'next/server'
 
 // The uploaded File's name is unreliable - canvas/blob exports are often nameless
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       } else {
         if (videoLogoOverlayEnabled()) finalBuffer = await overlayLogoOnVideo(finalBuffer)
         if (videoHeadlineOverlayEnabled()) finalBuffer = await overlayHeadlineOnVideo(finalBuffer, headline)
+        if (outroClipEnabled()) finalBuffer = await appendOutroClip(finalBuffer)
       }
 
       const originalPath = `creatives/${id}/original.${ext}`

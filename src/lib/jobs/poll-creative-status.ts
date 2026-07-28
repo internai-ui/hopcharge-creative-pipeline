@@ -6,6 +6,7 @@ import { overlayLogo, logoOverlayEnabled } from '@/lib/logo-overlay'
 import { overlayLogoOnVideo, videoLogoOverlayEnabled } from '@/lib/video-logo-overlay'
 import { overlayHeadline, headlineOverlayEnabled } from '@/lib/headline-overlay'
 import { overlayHeadlineOnVideo, videoHeadlineOverlayEnabled } from '@/lib/video-headline-overlay'
+import { appendOutroClip, outroClipEnabled } from '@/lib/video-append-clip'
 
 const THIRTY_MINUTES = 30 * 60 * 1000
 
@@ -63,7 +64,9 @@ export async function pollCreativeStatus(): Promise<void> {
         // The van is rendered unbranded; burn the real Hopcharge logo onto the frames.
         const logoBuffer = videoLogoOverlayEnabled() ? await overlayLogoOnVideo(buffer) : buffer
         // Composite the headline band onto every frame so the ad carries its own message.
-        const finalBuffer = videoHeadlineOverlayEnabled() ? await overlayHeadlineOnVideo(logoBuffer, creative.idea.headline) : logoBuffer
+        const headlinedBuffer = videoHeadlineOverlayEnabled() ? await overlayHeadlineOnVideo(logoBuffer, creative.idea.headline) : logoBuffer
+        // Append the outro clip after the headline band is baked in, so the outro never gets captioned.
+        const finalBuffer = outroClipEnabled() ? await appendOutroClip(headlinedBuffer) : headlinedBuffer
         const filePath = `creatives/${creative.id}/original.mp4`
         await storage.save(filePath, finalBuffer)
 
